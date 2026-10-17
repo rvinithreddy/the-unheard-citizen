@@ -92,12 +92,27 @@ def create_complaint(complaint: ComplaintCreate):
     return dict(row)
 
 
+
 @app.get("/api/complaints")
-def list_complaints():
+def list_complaints(
+    category: str | None = None,
+    status: str | None = None,
+):
+    query = "SELECT * FROM complaints WHERE 1=1"
+    params = []
+
+    if category:
+        query += " AND category = ?"
+        params.append(category)
+
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+
+    query += " ORDER BY id DESC"
+
     with get_db() as db:
-        rows = db.execute(
-            "SELECT * FROM complaints ORDER BY id DESC"
-        ).fetchall()
+        rows = db.execute(query, params).fetchall()
 
     return [dict(row) for row in rows]
 
