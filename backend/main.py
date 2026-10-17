@@ -165,9 +165,11 @@ def _assess_severity(text: str) -> dict:
             "dangerous", "injury", "accident", "overflowing drain",
         ],
         3: [
-            "garbage", "waste", "drainage", "pothole", "broken road",
-            "no water", "water supply", "sewer", "stray", "mosquito",
-        ],
+    "garbage", "waste", "drainage", "pothole", "broken road",
+    "damaged road", "road damage", "road damaged",
+    "damaged section of road", "road surface",
+    "no water", "water supply", "sewer", "stray", "mosquito",
+],
         2: ["noise", "damaged sign", "broken bench", "minor", "litter"],
     }
 
@@ -188,23 +190,44 @@ def _assess_severity(text: str) -> dict:
 
 
 def _find_similar(text: str, limit: int = 3) -> list[dict]:
-    """Compare against saved complaints using the notebook's TF-IDF artifacts when possible."""
+    """Find semantically similar saved complaints using a pretrained AI model."""
+
     try:
-        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sentence_transformers import SentenceTransformer
         from sklearn.metrics.pairwise import cosine_similarity
-    except Exception:
+
+        # Load the model once and reuse it for future requests.
+        if not hasattr(_find_similar, "_semantic_model"):
+            _find_similar._semantic_model = SentenceTransformer(
+                "sentence-transformers/all-MiniLM-L6-v2"
+            )
+
+        model = _find_similar._semantic_model
+
+    except Exception as exc:
+        print(f"Semantic AI unavailable: {type(exc).__name__}: {exc}")
         return []
 
-    candidates: list[dict] = []
-
-    # Existing user-submitted complaints in the app database.
+    # Compare only against real complaints saved in the database.
     try:
         with get_db() as db:
             rows = db.execute(
-                "SELECT id, title, category, description, status FROM complaints ORDER BY id DESC LIMIT 300"
+                """
+                SELECT id, title, category, description, status
+                FROM complaints
+                ORDER BY id DESC
+                LIMIT 300
+                """
             ).fetchall()
-        for row in rows:
-            candidate_text = f"{row['title']}. {row['description']}"
+    except sqlite3.Error:
+        return []
+
+    candidates = []
+
+    for row in rows:
+        candidate_text = f"{row['title']}. {row['description']}".strip()
+
+        if candidate_text:
             candidates.append({
                 "complaint_id": row["id"],
                 "title": row["title"],
@@ -214,53 +237,51 @@ def _find_similar(text: str, limit: int = 3) -> list[dict]:
                 "text": candidate_text,
                 "source": "database",
             })
-    except sqlite3.Error:
-        pass
 
-    # Notebook-generated examples can also be used as reference examples.
-    if training_data is not None and not training_data.empty:
-        title_col = next((c for c in training_data.columns if c.lower() == "title"), None)
-        desc_col = next((c for c in training_data.columns if c.lower() in {"description", "text", "complaint"}), None)
-        cat_col = next((c for c in training_data.columns if c.lower() in {"category", "label"}), None)
-        if title_col or desc_col:
-            for _, row in training_data.head(300).iterrows():
-                title = str(row[title_col]) if title_col else ""
-                description = str(row[desc_col]) if desc_col else ""
-                candidates.append({
-                    "complaint_id": None,
-                    "title": title,
-                    "category": str(row[cat_col]) if cat_col else None,
-                    "description": description,
-                    "status": None,
-                    "text": f"{title}. {description}".strip(". "),
-                    "source": "training_example",
-                })
-
-    candidates = [item for item in candidates if item["text"].strip()]
     if not candidates:
         return []
 
-    corpus = [text] + [item["text"] for item in candidates]
-    matrix = TfidfVectorizer(stop_words="english", ngram_range=(1, 2)).fit_transform(corpus)
-    scores = cosine_similarity(matrix[0:1], matrix[1:]).ravel()
+    try:
+        embeddings = model.encode(
+            [text] + [item["text"] for item in candidates],
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+        )
+
+        # Normalized embeddings allow cosine similarity via dot product.
+        scores = embeddings[1:] @ embeddings[0]
+
+    except Exception as exc:
+        print(f"Semantic comparison failed: {type(exc).__name__}: {exc}")
+        return []
+
+    # This is a starting threshold; we'll validate it with real examples.
+    threshold = float(ai_config.get("semantic_similarity_threshold", 0.55))
 
     results = []
-    threshold = float(ai_config.get("similarity_threshold", 0.65))
+
     for index in scores.argsort()[::-1][:limit]:
         score = float(scores[index])
+
         if score < threshold:
             continue
+
         item = candidates[int(index)]
+
         results.append({
             "complaint_id": item["complaint_id"],
             "title": item["title"][:150],
             "category": item["category"],
             "status": item["status"],
             "similarity": round(score, 4),
-            "source": item["source"],
+            "source": "database",
             "possible_duplicate": True,
-            "note": "Similarity is a lead for human review, not proof of a duplicate.",
+            "note": (
+                "Semantic similarity is a lead for human review, "
+                "not proof that two complaints describe the same incident."
+            ),
         })
+
     return results
 
 
