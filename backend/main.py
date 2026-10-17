@@ -1,18 +1,58 @@
-
+import json
+import re
 import sqlite3
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
+import joblib
+import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 
-DATABASE = "the_unheard_citizen.db"
+# Preserve the existing database location (relative to the project launch directory).
+BASE_DIR = Path(__file__).resolve().parent
+DATABASE = Path("the_unheard_citizen.db")
+AI_ARTIFACTS_DIR = BASE_DIR / "ai_artifacts"
+MODEL_PATH = AI_ARTIFACTS_DIR / "complaint_ai_model.joblib"
+CSV_PATH = AI_ARTIFACTS_DIR / "civic_complaints.csv"
+CONFIG_PATH = AI_ARTIFACTS_DIR / "ai_config.json"
+
+ai_model: Any = None
+ai_config: dict = {}
+training_data: pd.DataFrame | None = None
+ai_load_error: str | None = None
+
+
+def load_ai_artifacts() -> None:
+    """Load the saved model and optional reference data without blocking API startup."""
+    global ai_model, ai_config, training_data, ai_load_error
+
+    try:
+        if CONFIG_PATH.exists():
+            with CONFIG_PATH.open("r", encoding="utf-8") as file:
+                ai_config = json.load(file)
+
+        if MODEL_PATH.exists():
+            ai_model = joblib.load(MODEL_PATH)
+        else:
+            ai_load_error = f"AI model not found: {MODEL_PATH}"
+
+        if CSV_PATH.exists():
+            training_data = pd.read_csv(CSV_PATH)
+
+        if ai_model is not None:
+            ai_load_error = None
+    except Exception as exc:
+        ai_load_error = f"{type(exc).__name__}: {exc}"
+        ai_model = None
 
 
 def get_db():
-    connection = sqlite3.connect(DATABASE)
+    connection = sqlite3.connect(str(DATABASE))
     connection.row_factory = sqlite3.Row
     return connection
 
@@ -20,7 +60,8 @@ def get_db():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     with get_db() as db:
-        db.execute("""
+        db.execute(
+            """
             CREATE TABLE IF NOT EXISTS complaints (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
@@ -30,15 +71,18 @@ async def lifespan(app: FastAPI):
                 status TEXT NOT NULL DEFAULT 'Received',
                 created_at TEXT NOT NULL
             )
-        """)
+            """
+        )
+    load_ai_artifacts()
     yield
 
 
 app = FastAPI(
     title="The Unheard Citizen API",
-    description="Backend for citizen complaint reporting",
+    description="Backend for citizen complaint reporting with AI-assisted analysis",
     lifespan=lifespan,
 )
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -55,6 +99,192 @@ class ComplaintCreate(BaseModel):
     severity: int = Field(ge=1, le=5)
 
 
+class AIAnalysisRequest(BaseModel):
+    title: str = Field(min_length=5, max_length=150)
+    description: str = Field(min_length=10, max_length=2000)
+
+
+def _text_for_model(title: str, description: str) -> str:
+    return f"{title.strip()}. {description.strip()}"
+
+
+def _predict_category(text: str) -> dict:
+    """Use the saved classifier when available; do not invent a prediction if it fails."""
+    if ai_model is None:
+        return {
+            "suggested_category": None,
+            "category_confidence": None,
+            "model_available": False,
+        }
+
+    try:
+        prediction_input = [text]
+        predicted = ai_model.predict(prediction_input)[0]
+        confidence = None
+
+        if hasattr(ai_model, "predict_proba"):
+            probabilities = ai_model.predict_proba(prediction_input)[0]
+            confidence = round(float(max(probabilities)), 4)
+
+        return {
+            "suggested_category": str(predicted),
+            "category_confidence": confidence,
+            "model_available": True,
+        }
+    except Exception as exc:
+        return {
+            "suggested_category": None,
+            "category_confidence": None,
+            "model_available": False,
+            "model_note": f"Model prediction failed: {type(exc).__name__}",
+        }
+
+
+def _summarize(text: str, max_chars: int = 240) -> str:
+    """Simple extractive summary; this is not a generative language model."""
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    sentences = re.split(r"(?<=[.!?])\s+", cleaned)
+    summary = sentences[0] if sentences else cleaned
+    if len(summary) > max_chars:
+        summary = summary[: max_chars - 3].rsplit(" ", 1)[0] + "..."
+    return summary
+
+
+def _assess_severity(text: str) -> dict:
+    """Rule-based suggestion only. It must be reviewed by a person."""
+    lower = text.lower()
+    levels = {
+        5: [
+            "fire", "gas leak", "electrocution", "live wire", "electric wire",
+            "collapsed", "building collapse", "major accident", "life threatening",
+            "severe flooding", "open manhole", "exposed wire",
+        ],
+        4: [
+            "water leak", "burst pipe", "sewage overflow", "deep pothole",
+            "streetlight not working", "dark road", "blocked emergency access",
+            "dangerous", "injury", "accident", "overflowing drain",
+        ],
+        3: [
+            "garbage", "waste", "drainage", "pothole", "broken road",
+            "no water", "water supply", "sewer", "stray", "mosquito",
+        ],
+        2: ["noise", "damaged sign", "broken bench", "minor", "litter"],
+    }
+
+    score = 1
+    matched_signals = []
+    for level in (5, 4, 3, 2):
+        hits = [keyword for keyword in levels[level] if keyword in lower]
+        if hits:
+            score = level
+            matched_signals = hits[:3]
+            break
+
+    return {
+        "suggested_severity": score,
+        "severity_note": "AI-assisted estimate only; a human should verify severity.",
+        "severity_signals": matched_signals,
+    }
+
+
+def _find_similar(text: str, limit: int = 3) -> list[dict]:
+    """Compare against saved complaints using the notebook's TF-IDF artifacts when possible."""
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+    except Exception:
+        return []
+
+    candidates: list[dict] = []
+
+    # Existing user-submitted complaints in the app database.
+    try:
+        with get_db() as db:
+            rows = db.execute(
+                "SELECT id, title, category, description, status FROM complaints ORDER BY id DESC LIMIT 300"
+            ).fetchall()
+        for row in rows:
+            candidate_text = f"{row['title']}. {row['description']}"
+            candidates.append({
+                "complaint_id": row["id"],
+                "title": row["title"],
+                "category": row["category"],
+                "description": row["description"],
+                "status": row["status"],
+                "text": candidate_text,
+                "source": "database",
+            })
+    except sqlite3.Error:
+        pass
+
+    # Notebook-generated examples can also be used as reference examples.
+    if training_data is not None and not training_data.empty:
+        title_col = next((c for c in training_data.columns if c.lower() == "title"), None)
+        desc_col = next((c for c in training_data.columns if c.lower() in {"description", "text", "complaint"}), None)
+        cat_col = next((c for c in training_data.columns if c.lower() in {"category", "label"}), None)
+        if title_col or desc_col:
+            for _, row in training_data.head(300).iterrows():
+                title = str(row[title_col]) if title_col else ""
+                description = str(row[desc_col]) if desc_col else ""
+                candidates.append({
+                    "complaint_id": None,
+                    "title": title,
+                    "category": str(row[cat_col]) if cat_col else None,
+                    "description": description,
+                    "status": None,
+                    "text": f"{title}. {description}".strip(". "),
+                    "source": "training_example",
+                })
+
+    candidates = [item for item in candidates if item["text"].strip()]
+    if not candidates:
+        return []
+
+    corpus = [text] + [item["text"] for item in candidates]
+    matrix = TfidfVectorizer(stop_words="english", ngram_range=(1, 2)).fit_transform(corpus)
+    scores = cosine_similarity(matrix[0:1], matrix[1:]).ravel()
+
+    results = []
+    threshold = float(ai_config.get("similarity_threshold", 0.65))
+    for index in scores.argsort()[::-1][:limit]:
+        score = float(scores[index])
+        if score < threshold:
+            continue
+        item = candidates[int(index)]
+        results.append({
+            "complaint_id": item["complaint_id"],
+            "title": item["title"][:150],
+            "category": item["category"],
+            "status": item["status"],
+            "similarity": round(score, 4),
+            "source": item["source"],
+            "possible_duplicate": True,
+            "note": "Similarity is a lead for human review, not proof of a duplicate.",
+        })
+    return results
+
+
+def analyze_text(title: str, description: str) -> dict:
+    combined = _text_for_model(title, description)
+    category_result = _predict_category(combined)
+    severity_result = _assess_severity(combined)
+    similar = _find_similar(combined)
+
+    return {
+        **category_result,
+        "summary": _summarize(description),
+        **severity_result,
+        "possible_duplicates": similar,
+        "human_review_required": True,
+        "limitations": [
+            "The category model was trained on synthetic examples and may be inaccurate.",
+            "Severity is a keyword-based suggestion, not a verified risk assessment.",
+            "The summary is extractive and is not generated by a large language model.",
+            "Possible duplicate matches must be checked by a person.",
+        ],
+    }
+
+
 @app.get("/")
 def home():
     return {"message": "The Unheard Citizen API is running"}
@@ -63,6 +293,23 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/ai/status")
+def ai_status():
+    return {
+        "model_loaded": ai_model is not None,
+        "reference_csv_loaded": training_data is not None,
+        "config_loaded": bool(ai_config),
+        "model_path": str(MODEL_PATH),
+        "note": ai_load_error,
+    }
+
+
+@app.post("/api/ai/analyze")
+def analyze_complaint(request: AIAnalysisRequest):
+    """Return AI suggestions before the user submits a complaint."""
+    return analyze_text(request.title, request.description)
 
 
 @app.post("/api/complaints", status_code=201)
@@ -83,7 +330,6 @@ def create_complaint(complaint: ComplaintCreate):
             ),
         )
         complaint_id = cursor.lastrowid
-
         row = db.execute(
             "SELECT * FROM complaints WHERE id = ?",
             (complaint_id,),
@@ -113,15 +359,12 @@ def list_complaints(
 
     with get_db() as db:
         rows = db.execute(query, params).fetchall()
-
     return [dict(row) for row in rows]
 
 
 @app.patch("/api/complaints/{complaint_id}/status")
 def update_status(complaint_id: int, status: str):
-    allowed = {
-        "Received", "Under Review", "In Progress", "Resolved"
-    }
+    allowed = {"Received", "Under Review", "In Progress", "Resolved"}
 
     if status not in allowed:
         raise HTTPException(

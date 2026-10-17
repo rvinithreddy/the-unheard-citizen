@@ -1,0 +1,25 @@
+{
+    "project_name": "The Unheard Citizen",
+    "module_name": "Civic Complaint AI",
+    "version": "2.0",
+    "model_type": "TF-IDF + LogisticRegression",
+    "open_category_method": "Keyword rules + classifier confidence threshold",
+    "summary_method": "Extractive",
+    "severity_method": "Rule-based screening",
+    "similarity_method": "TF-IDF cosine similarity",
+    "duplicate_threshold": 0.65,
+    "human_review_required": true,
+    "dataset_is_synthetic": true,
+    "database_writes_enabled": false,
+    "pretrained_transformer_required": false,
+    "known_categories": [
+        "Road Damage",
+        "Garbage and Waste",
+        "Drainage and Sewage",
+        "Water Supply and Leakage",
+        "Street Lighting",
+        "Public Safety",
+        "Public Infrastructure",
+        "Other Civic Issue"
+    ]
+}
