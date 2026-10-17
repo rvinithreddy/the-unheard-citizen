@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d347b">
+  <title>The Unheard Citizen — Report Today. Solve Tomorrow.</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" data-view="home" aria-label="The Unheard Citizen home">
+      <span class="brand-mark" aria-hidden="true"><span>✳</span></span>
+      <span class="brand-copy"><strong>THE<br>UNHEARD CITIZEN</strong><small>Your Voice. A Better Tomorrow.</small></span>
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation">☰</button>
+    <nav class="nav" id="mainNav">
+      <button class="nav-link active" data-view="home">⌂ <span>Home</span></button>
+      <button class="nav-link" data-view="report">▤ <span>Report Issue</span></button>
+      <button class="nav-link" data-view="complaints">☷ <span>View Complaints</span></button>
+      <button class="nav-link" data-view="dashboard">▥ <span>Dashboard</span></button>
+      <button class="nav-link" data-view="about">ⓘ <span>About</span></button>
+    </nav>
+    <button class="login-button" id="adminModeBtn">♙ <span>Admin View</span></button>
+  </header>
+
+  <main>
+    <section class="view active exact-home" id="homeView" aria-label="The Unheard Citizen home page">
+      <div class="reference-home-wrap">
+        <img class="reference-home-image" src="assets/reference-home.jpg" alt="The Unheard Citizen homepage showing civic reporting, complaint statistics and common issue categories">
+        <!-- Clickable hotspots keep the supplied reference visually unchanged while enabling navigation. -->
+        <button class="image-hotspot hotspot-home-report" data-view="report" aria-label="Report an issue" title="Report an issue"></button>
+        <button class="image-hotspot hotspot-home-complaints" data-view="complaints" aria-label="View complaints" title="View complaints"></button>
+        <button class="image-hotspot hotspot-nav-report" data-view="report" aria-label="Report Issue navigation" title="Report Issue"></button>
+        <button class="image-hotspot hotspot-nav-complaints" data-view="complaints" aria-label="View Complaints navigation" title="View Complaints"></button>
+        <button class="image-hotspot hotspot-nav-dashboard" data-view="dashboard" aria-label="Dashboard navigation" title="Dashboard"></button>
+        <button class="image-hotspot hotspot-nav-about" data-view="about" aria-label="About navigation" title="About"></button>
+        <button class="image-hotspot hotspot-login" id="referenceAdminButton" aria-label="Login or admin view" title="Admin view"></button>
+        <button class="image-hotspot hotspot-category-road" data-category="Roads & Infrastructure" aria-label="Report a road issue" title="Report a road issue"></button>
+        <button class="image-hotspot hotspot-category-waste" data-category="Waste Management" aria-label="Report a waste management issue" title="Report waste management issue"></button>
+        <button class="image-hotspot hotspot-category-water" data-category="Water Supply" aria-label="Report a water issue" title="Report water issue"></button>
+        <button class="image-hotspot hotspot-category-light" data-category="Street Lighting" aria-label="Report a street lighting issue" title="Report street lighting issue"></button>
+        <button class="image-hotspot hotspot-category-public" data-category="Public Facilities" aria-label="Report a public facilities issue" title="Report public facilities issue"></button>
+      </div>
+    </section>
+
+    <section class="view page-view" id="reportView">
+      <div class="page-heading"><p class="eyebrow">YOUR VOICE MAKES A DIFFERENCE</p><h1>Report a <span>Community Issue</span></h1><p>Share the details so the right team can review the issue.</p></div>
+      <form id="reportForm" class="form-card">
+        <div class="form-progress"><span class="step-current">1</span><span>Issue details</span><i></i><span class="step-muted">2</span><span>Review & submit</span></div>
+        <div class="form-grid">
+          <label class="field full">Issue title <em>*</em><input id="issueTitle" name="title" required maxlength="120" placeholder="e.g. Large pothole near the bus stop"></label>
+          <label class="field">Issue category <em>*</em><select id="issueCategory" name="category" required><option value="">Select a category</option><option>Roads & Infrastructure</option><option>Waste Management</option><option>Water Supply</option><option>Street Lighting</option><option>Public Facilities</option><option>Accessibility Barrier</option><option>Community Support Gap</option><option>Other</option></select></label>
+          <label class="field">Location / locality <em>*</em><input id="issueLocation" name="location" required maxlength="180" placeholder="Street, area, town or landmark"></label>
+          <label class="field full">Describe the issue <em>*</em><textarea id="issueDescription" name="description" required minlength="10" rows="5" maxlength="2000" placeholder="What happened? Where exactly? Who is affected?"></textarea><small class="field-hint">Please avoid including sensitive personal information.</small></label>
+          <label class="field full">Supporting photo (optional)<input id="issuePhoto" type="file" accept="image/png,image/jpeg,image/webp"><small class="field-hint">Demo preview only. File upload to the server must be supported by your backend before photos are stored.</small></label>
+        </div>
+        <div class="form-footer"><span class="privacy-note">♢ Your report will be reviewed before action is taken.</span><button class="btn btn-primary" type="submit">Submit Report <span>→</span></button></div>
+        <div id="reportMessage" class="message" role="status" hidden></div>
+      </form>
+    </section>
+
+    <section class="view page-view" id="complaintsView">
+      <div class="page-heading"><p class="eyebrow">STAY INFORMED</p><h1>Community <span>Reports</span></h1><p>Search reports and follow their progress transparently.</p></div>
+      <div class="toolbar"><input id="complaintSearch" type="search" placeholder="⌕  Search by ID, title or location"><select id="statusFilter"><option value="">All statuses</option><option>Reported</option><option>Under Review</option><option>In Progress</option><option>Resolved</option><option>Overdue</option></select><select id="categoryFilter"><option value="">All categories</option><option>Roads & Infrastructure</option><option>Waste Management</option><option>Water Supply</option><option>Street Lighting</option><option>Public Facilities</option><option>Accessibility Barrier</option><option>Community Support Gap</option><option>Other</option></select></div>
+      <div id="complaintList" class="complaint-list"></div>
+      <p id="complaintSourceNote" class="source-note">Showing sample records until the backend is connected.</p>
+    </section>
+
+    <section class="view page-view" id="dashboardView">
+      <div class="page-heading"><p class="eyebrow">COMMUNITY AT A GLANCE</p><h1>Impact <span>Dashboard</span></h1><p>A clearer view of issues raised and progress made.</p></div>
+      <div class="dashboard-grid">
+        <article class="dash-card"><span class="stat-icon blue">▤</span><small>Total reports</small><strong id="dashTotal">1,248</strong><span class="positive">Community submissions</span></article>
+        <article class="dash-card"><span class="stat-icon green">✓</span><small>Resolved</small><strong id="dashResolved">826</strong><span class="positive">Issues marked resolved</span></article>
+        <article class="dash-card"><span class="stat-icon amber">◷</span><small>In progress</small><strong id="dashProgress">312</strong><span class="neutral">Awaiting completion</span></article>
+        <article class="dash-card"><span class="stat-icon red">⚠</span><small>Needs attention</small><strong id="dashOverdue">110</strong><span class="negative">Requires follow-up</span></article>
+      </div>
+      <div class="panel chart-panel"><div class="panel-heading"><div><h2>Report status overview</h2><p>Illustrative sample distribution</p></div><span class="pill">Demo data</span></div><div id="statusChart" class="bar-chart"></div></div>
+    </section>
+
+    <section class="view page-view" id="aboutView">
+      <div class="page-heading"><p class="eyebrow">OUR PURPOSE</p><h1>Every voice <span>matters.</span></h1><p>The Unheard Citizen helps communities raise concerns, follow progress and make local services more accountable.</p></div>
+      <div class="about-grid"><article class="about-card"><span>◎</span><h2>Transparent tracking</h2><p>Reports should have clear statuses and updates, so citizens can understand what happens next.</p></article><article class="about-card"><span>♧</span><h2>Community-led</h2><p>People can bring overlooked local problems to attention and help decision-makers see recurring needs.</p></article><article class="about-card"><span>✦</span><h2>AI-assisted review</h2><p>AI may suggest categories, priority and possible duplicates. A human reviewer remains responsible for decisions.</p></article></div>
+    </section>
+
+    <section class="view page-view" id="adminView">
+      <div class="admin-top"><div><p class="eyebrow">STAFF WORKSPACE · DEMO</p><h1>Admin <span>Command Centre</span></h1><p>Review reports, coordinate action and monitor resolution.</p></div><span class="pill warning-pill">Demo mode</span></div>
+      <div class="admin-stats">
+        <article class="dash-card"><small>Total reports</small><strong id="adminTotal">1,248</strong><span>All submitted reports</span></article>
+        <article class="dash-card"><small>Pending review</small><strong id="adminPending">24</strong><span>Awaiting a reviewer</span></article>
+        <article class="dash-card"><small>High priority</small><strong id="adminHigh">18</strong><span>Suggested for attention</span></article>
+        <article class="dash-card"><small>Resolved</small><strong id="adminResolved">826</strong><span>Marked complete</span></article>
+      </div>
+      <div class="panel admin-table-panel"><div class="panel-heading"><div><h2>Complaint review queue</h2><p>Inspect each report and update its status.</p></div><input id="adminSearch" class="small-search" type="search" placeholder="Search reports"></div><div class="table-wrap"><table><thead><tr><th>Report</th><th>Category</th><th>Location</th><th>AI suggestion</th><th>Status</th><th>Update status</th></tr></thead><tbody id="adminTableBody"></tbody></table></div></div>
+      <div class="panel review-note"><span class="review-symbol">✦</span><div><h3>Human-led AI review</h3><p>AI can suggest a category, priority and potential duplicate matches. These are recommendations only. Review the report and evidence before taking action; never automatically reject a report based only on an AI flag.</p></div></div>
+    </section>
+  </main>
+
+  <footer class="footer"><div class="footer-brand"><strong>THE UNHEARD CITIZEN</strong><small>Your Voice. A Better Tomorrow.</small></div><p>Building cleaner, safer and more responsive communities.</p><span>© 2026 The Unheard Citizen · Prototype</span></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="script.js"></script>
+</body>
+</html>
