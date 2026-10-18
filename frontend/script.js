@@ -19,7 +19,7 @@ const DEMO_REPORTS = [
   {id:"UC-1004",title:"Wheelchair access blocked",category:"Accessibility Barrier",location:"Community Health Centre",description:"The ramp entrance is blocked by parked vehicles.",status:"Under Review",priority:"High",created_at:"2026-10-16"},
   {id:"UC-1005",title:"Irregular water supply",category:"Water Supply",location:"Green Park Colony",description:"Water supply has been irregular this week.",status:"Overdue",priority:"High",created_at:"2026-10-08"}
 ];
-let reports = [...DEMO_REPORTS];
+let reports = [];
 let toastTimer;
 
 function showToast(message) {
@@ -70,11 +70,13 @@ async function loadReports() {
     const body = await response.json();
     const rows = Array.isArray(body) ? body : (body.complaints ?? body.items ?? body.data ?? []);
     reports = rows.map(normalizeComplaint);
-    $("#complaintSourceNote").textContent = "Connected to the backend API.";
-  } catch (error) {
-    $("#complaintSourceNote").textContent = "Could not reach the backend. Showing demo records. Check that the API is running.";
-    console.warn("Complaint API unavailable:", error);
-  }
+$("#complaintSourceNote").textContent = "Connected to the backend API.";
+} catch (error) {
+  reports = [];
+  $("#complaintSourceNote").textContent =
+    "Could not reach the backend. No complaint data is available.";
+  console.warn("Complaint API unavailable:", error);
+}
 }
 function getCounts() {
   return {
