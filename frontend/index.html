@@ -17,30 +17,185 @@
     <nav class="nav" id="mainNav">
       <button class="nav-link active" data-view="home">⌂ <span>Home</span></button>
       <button class="nav-link" data-view="report">▤ <span>Report Issue</span></button>
-      <button class="nav-link" data-view="complaints">☷ <span>View Complaints</span></button>
+      <button class="nav-link" data-view="complaints" id="navComplaints">☷ <span>Track Complaints</span></button>
       <button class="nav-link" data-view="dashboard">▥ <span>Dashboard</span></button>
       <button class="nav-link" data-view="about">ⓘ <span>About</span></button>
+      <div class="nav-mobile-auth">
+        <button class="user-role-pill" id="mobileCitizenBtn">👤 <span id="mobileUserRoleLabel">Citizen Profile</span></button>
+        <button class="login-button" id="mobileAdminBtn">♙ <span>Admin View</span></button>
+      </div>
     </nav>
-    <button class="login-button" id="adminModeBtn">♙ <span>Admin View</span></button>
+    <div class="topbar-actions">
+      <button class="user-role-pill" id="citizenLoginBtn" title="Switch or edit Citizen Profile">👤 <span id="userRoleLabel">Priya Sharma (Ward 12)</span></button>
+      <button class="login-button" id="adminModeBtn">♙ <span>Admin View</span></button>
+    </div>
   </header>
 
   <main>
-    <section class="view active exact-home" id="homeView" aria-label="The Unheard Citizen home page">
-      <div class="reference-home-wrap">
-        <img class="reference-home-image" src="assets/reference-home.jpg" alt="The Unheard Citizen homepage showing civic reporting, complaint statistics and common issue categories">
-        <!-- Clickable hotspots keep the supplied reference visually unchanged while enabling navigation. -->
-        <button class="image-hotspot hotspot-home-report" data-view="report" aria-label="Report an issue" title="Report an issue"></button>
-        <button class="image-hotspot hotspot-home-complaints" data-view="complaints" aria-label="View complaints" title="View complaints"></button>
-        <button class="image-hotspot hotspot-nav-report" data-view="report" aria-label="Report Issue navigation" title="Report Issue"></button>
-        <button class="image-hotspot hotspot-nav-complaints" data-view="complaints" aria-label="View Complaints navigation" title="View Complaints"></button>
-        <button class="image-hotspot hotspot-nav-dashboard" data-view="dashboard" aria-label="Dashboard navigation" title="Dashboard"></button>
-        <button class="image-hotspot hotspot-nav-about" data-view="about" aria-label="About navigation" title="About"></button>
-        <button class="image-hotspot hotspot-login" id="referenceAdminButton" aria-label="Login or admin view" title="Admin view"></button>
-        <button class="image-hotspot hotspot-category-road" data-category="Roads & Infrastructure" aria-label="Report a road issue" title="Report a road issue"></button>
-        <button class="image-hotspot hotspot-category-waste" data-category="Waste Management" aria-label="Report a waste management issue" title="Report waste management issue"></button>
-        <button class="image-hotspot hotspot-category-water" data-category="Water Supply" aria-label="Report a water issue" title="Report water issue"></button>
-        <button class="image-hotspot hotspot-category-light" data-category="Street Lighting" aria-label="Report a street lighting issue" title="Report street lighting issue"></button>
-        <button class="image-hotspot hotspot-category-public" data-category="Public Facilities" aria-label="Report a public facilities issue" title="Report public facilities issue"></button>
+    <section class="view active" id="homeView" aria-label="The Unheard Citizen home page">
+      <!-- Hero Banner -->
+      <div class="hero">
+        <div class="hero-content">
+          <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span>LIVE CIVIC REPORTING PLATFORM</p>
+          <h1>Report Today. <span>Solve Tomorrow.</span></h1>
+          <p class="hero-subtitle">Your Voice. <strong>A Better Tomorrow.</strong></p>
+          <p class="hero-description">The Unheard Citizen connects community members directly with civic administrators. Report local infrastructure breakdowns, street hazards, and sanitation gaps with transparent tracking and AI-assisted priority screening.</p>
+          <div class="hero-perks">
+            <span><b>✓</b> Transparent Resolution</span>
+            <span><b>✦</b> AI-Assisted Screening</span>
+            <span><b>⌖</b> Geo-Tracked Records</span>
+          </div>
+          <div class="hero-actions">
+            <button class="btn btn-primary" data-view="report">Report a Problem <span>→</span></button>
+            <button class="btn btn-white" data-view="complaints">Track Complaints <span>☷</span></button>
+          </div>
+          <p class="hero-note"><span>✦</span> AI models screen hazard severity and detect duplicate complaints in real-time.</p>
+        </div>
+
+        <!-- Floating Category Highlights -->
+        <div class="floating-tag tag-road" aria-hidden="true">
+          <span class="tag-icon">🚧</span>
+          <div>
+            <b>Roads & Hazards</b>
+            <small>Potholes, broken paving</small>
+          </div>
+        </div>
+        <div class="floating-tag tag-waste" aria-hidden="true">
+          <span class="tag-icon">🗑️</span>
+          <div>
+            <b>Waste Management</b>
+            <small>Garbage overflow, cleanup</small>
+          </div>
+        </div>
+        <div class="floating-tag tag-water" aria-hidden="true">
+          <span class="tag-icon">💧</span>
+          <div>
+            <b>Water Supply</b>
+            <small>Pipeline leaks, supply gaps</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Statistics Strip -->
+      <div class="stats-strip" aria-label="Community impact statistics">
+        <div class="stat">
+          <span class="stat-icon blue">▤</span>
+          <div>
+            <strong id="homeTotalStat">0</strong>
+            <small>Total Reports</small>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="stat-icon green">✓</span>
+          <div>
+            <strong id="homeResolvedStat">0</strong>
+            <small>Resolved</small>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="stat-icon amber">◷</span>
+          <div>
+            <strong id="homeProgressStat">0</strong>
+            <small>In Progress</small>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="stat-icon purple">◎</span>
+          <div>
+            <strong id="homeReviewStat">0</strong>
+            <small>Under Review</small>
+          </div>
+        </div>
+        <div class="stat">
+          <span class="stat-icon red">⚠</span>
+          <div>
+            <strong id="homeAttentionStat">0</strong>
+            <small>High Priority</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories Section -->
+      <div class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">BROWSE BY CATEGORY</p>
+            <h2>Explore Issue <span>Categories</span></h2>
+          </div>
+          <button class="text-link" data-view="complaints">View all reports <span>→</span></button>
+        </div>
+
+        <div class="category-grid">
+          <button class="category-card" data-category="Roads & Infrastructure" aria-label="Report a road issue">
+            <div class="category-art road-art"><span>🚧</span></div>
+            <div class="category-body">
+              <span class="category-icon pink">🚧</span>
+              <h3>Roads & Infrastructure</h3>
+              <p>Potholes, damaged surfaces, missing guardrails, and sidewalks.</p>
+              <span id="catRoadCount" class="report-count pink-count">0 reports</span>
+            </div>
+          </button>
+
+          <button class="category-card" data-category="Waste Management" aria-label="Report a waste issue">
+            <div class="category-art waste-art"><span>🗑️</span></div>
+            <div class="category-body">
+              <span class="category-icon mint">🗑️</span>
+              <h3>Waste Management</h3>
+              <p>Overflowing public bins, illegal dumping, and uncollected trash.</p>
+              <span id="catWasteCount" class="report-count mint-count">0 reports</span>
+            </div>
+          </button>
+
+          <button class="category-card" data-category="Water Supply" aria-label="Report a water issue">
+            <div class="category-art water-art"><span>💧</span></div>
+            <div class="category-body">
+              <span class="category-icon sky">💧</span>
+              <h3>Water Supply</h3>
+              <p>Burst pipes, low pressure, water contamination, and leaks.</p>
+              <span id="catWaterCount" class="report-count sky-count">0 reports</span>
+            </div>
+          </button>
+
+          <button class="category-card" data-category="Street Lighting" aria-label="Report a lighting issue">
+            <div class="category-art light-art"><span>💡</span></div>
+            <div class="category-body">
+              <span class="category-icon yellow">💡</span>
+              <h3>Street Lighting</h3>
+              <p>Dark road corridors, flickering lamps, and broken fixtures.</p>
+              <span id="catLightCount" class="report-count yellow-count">0 reports</span>
+            </div>
+          </button>
+
+          <button class="category-card" data-category="Public Facilities" aria-label="Report a public facility issue">
+            <div class="category-art public-art"><span>🏛️</span></div>
+            <div class="category-body">
+              <span class="category-icon lavender">🏛️</span>
+              <h3>Public Facilities</h3>
+              <p>Parks, public restrooms, community centers, and barrier ramps.</p>
+              <span id="catPublicCount" class="report-count lavender-count">0 reports</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Impact Band -->
+      <div class="impact-band">
+        <div>
+          <span class="impact-icon" aria-hidden="true">⚡</span>
+          <p><b>Rapid Reporting</b><small>Submit a civic issue in under 2 minutes</small></p>
+        </div>
+        <div>
+          <span class="impact-icon" aria-hidden="true">✦</span>
+          <p><b>AI Priority Screening</b><small>Automated hazard & duplicate check</small></p>
+        </div>
+        <div>
+          <span class="impact-icon" aria-hidden="true">◎</span>
+          <p><b>Live Tracking</b><small>Follow progress from intake to fix</small></p>
+        </div>
+        <div>
+          <span class="impact-icon" aria-hidden="true">✓</span>
+          <p><b>Verified Resolution</b><small>Civic staff review and verify</small></p>
+        </div>
       </div>
     </section>
 
@@ -52,7 +207,87 @@
           <label class="field full">Issue title <em>*</em><input id="issueTitle" name="title" required maxlength="120" placeholder="e.g. Large pothole near the bus stop"></label>
           <label class="field">Issue category <em>*</em><select id="issueCategory" name="category" required><option value="">Select a category</option><option>Roads & Infrastructure</option><option>Waste Management</option><option>Water Supply</option><option>Street Lighting</option><option>Public Facilities</option><option>Accessibility Barrier</option><option>Community Support Gap</option><option>Other</option></select></label>
           <label class="field">Location / locality <em>*</em><input id="issueLocation" name="location" required maxlength="180" placeholder="Street, area, town or landmark"></label>
+          <label class="field">Reporting citizen<input id="issueCitizenName" name="citizen_name" maxlength="100" placeholder="Priya Sharma (or Anonymous Citizen)"><small class="field-hint">Auto-filled from active citizen profile.</small></label>
           <label class="field full">Describe the issue <em>*</em><textarea id="issueDescription" name="description" required minlength="10" rows="5" maxlength="2000" placeholder="What happened? Where exactly? Who is affected?"></textarea><small class="field-hint">Please avoid including sensitive personal information.</small></label>
+          <input type="hidden" id="issueSeverity" name="severity" value="3">
+
+          <!-- AI Assistant Card (Step 2) -->
+          <div class="field full ai-card-wrapper">
+            <div id="aiAssistantCard" class="ai-assistant-card" aria-live="polite">
+              <div class="ai-assistant-header">
+                <div class="ai-title-group">
+                  <span class="ai-sparkle-icon" aria-hidden="true">✦</span>
+                  <strong>Civic AI Assistant</strong>
+                  <span id="aiStatusPill" class="ai-status-pill idle">Ready</span>
+                </div>
+                <button type="button" id="aiRetryBtn" class="ai-action-btn" style="display:none;" aria-label="Retry AI Analysis">↻ Retry Analysis</button>
+              </div>
+
+              <!-- Idle State -->
+              <div id="aiIdleState" class="ai-state-box">
+                <p class="ai-state-text">Start typing your title and description above to get real-time AI category suggestions, hazard priority screening, and duplicate checks.</p>
+              </div>
+
+              <!-- Loading State -->
+              <div id="aiLoadingState" class="ai-state-box" style="display:none;">
+                <div class="ai-spinner" aria-hidden="true"></div>
+                <p class="ai-state-text">Analyzing issue details with civic classification models…</p>
+              </div>
+
+              <!-- Error State -->
+              <div id="aiErrorState" class="ai-state-box ai-error-box" style="display:none;">
+                <span class="ai-state-icon">⚠️</span>
+                <p id="aiErrorMessage" class="ai-state-text">Unable to complete AI analysis at this moment.</p>
+              </div>
+
+              <!-- Results Container -->
+              <div id="aiResultsContainer" class="ai-results-grid" style="display:none;">
+                <!-- Category Recommendation -->
+                <div id="aiCategorySection" class="ai-result-panel" style="display:none;">
+                  <div class="ai-panel-inner">
+                    <div class="ai-meta-col">
+                      <span class="ai-meta-label">Suggested Category</span>
+                      <div class="ai-category-val-wrap">
+                        <strong id="aiCategoryName" class="ai-category-val"></strong>
+                        <span id="aiCategoryConfidence" class="ai-pill-confidence"></span>
+                      </div>
+                    </div>
+                    <button type="button" id="applyCategoryBtn" class="btn-apply-suggestion">Apply Suggestion ✓</button>
+                  </div>
+                </div>
+
+                <!-- Severity & Hazard Signals -->
+                <div id="aiSeveritySection" class="ai-result-panel" style="display:none;">
+                  <span class="ai-meta-label">Hazard & Priority Screening</span>
+                  <div class="ai-severity-display">
+                    <div id="aiSeverityMeter" class="severity-meter-bars" aria-label="Severity level indicator">
+                      <span class="sev-bar" data-level="1"></span>
+                      <span class="sev-bar" data-level="2"></span>
+                      <span class="sev-bar" data-level="3"></span>
+                      <span class="sev-bar" data-level="4"></span>
+                      <span class="sev-bar" data-level="5"></span>
+                    </div>
+                    <span id="aiSeverityBadge" class="ai-severity-badge"></span>
+                  </div>
+                  <div id="aiKeywordsWrap" class="ai-keywords-wrap" style="display:none;">
+                    <span class="ai-keywords-caption">Detected safety signals:</span>
+                    <div id="aiKeywordsList" class="ai-keywords-chips"></div>
+                  </div>
+                </div>
+
+                <!-- Duplicate Detection -->
+                <div id="aiDuplicatesSection" class="ai-result-panel ai-duplicates-panel" style="display:none;">
+                  <div class="ai-dups-header">
+                    <span class="ai-warn-icon">ℹ</span>
+                    <strong>Similar Reports Detected</strong>
+                  </div>
+                  <p class="ai-dups-notice">Review these existing complaints to ensure this is not a duplicate issue:</p>
+                  <div id="aiDuplicatesList" class="ai-duplicates-list"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <label class="field full">Supporting photo (optional)<input id="issuePhoto" type="file" accept="image/png,image/jpeg,image/webp"><small class="field-hint">Demo preview only. File upload to the server must be supported by your backend before photos are stored.</small></label>
         </div>
         <div class="form-footer"><span class="privacy-note">♢ Your report will be reviewed before action is taken.</span><button class="btn btn-primary" type="submit">Submit Report <span>→</span></button></div>
@@ -61,8 +296,8 @@
     </section>
 
     <section class="view page-view" id="complaintsView">
-      <div class="page-heading"><p class="eyebrow">STAY INFORMED</p><h1>Community <span>Reports</span></h1><p>Search reports and follow their progress transparently.</p></div>
-      <div class="toolbar"><input id="complaintSearch" type="search" placeholder="⌕  Search by ID, title or location"><select id="statusFilter"><option value="">All statuses</option><option>Reported</option><option>Under Review</option><option>In Progress</option><option>Resolved</option><option>Overdue</option></select><select id="categoryFilter"><option value="">All categories</option><option>Roads & Infrastructure</option><option>Waste Management</option><option>Water Supply</option><option>Street Lighting</option><option>Public Facilities</option><option>Accessibility Barrier</option><option>Community Support Gap</option><option>Other</option></select></div>
+      <div class="page-heading"><p class="eyebrow">STAY INFORMED</p><h1>Track Community <span>Reports</span></h1><p>Search civic reports, inspect details, and follow resolution progress transparently.</p></div>
+      <div class="toolbar"><input id="complaintSearch" type="search" placeholder="⌕  Search by ID, title, locality, or keyword"><select id="statusFilter"><option value="">All statuses</option><option>Reported</option><option>Under Review</option><option>In Progress</option><option>Resolved</option><option>Overdue</option></select><select id="categoryFilter"><option value="">All categories</option><option>Roads & Infrastructure</option><option>Waste Management</option><option>Water Supply</option><option>Street Lighting</option><option>Public Facilities</option><option>Accessibility Barrier</option><option>Community Support Gap</option><option>Other</option></select><button type="button" id="myReportsBtn" class="filter-toggle-btn" title="Toggle between all community reports and your own submissions">👤 My Reports</button></div>
       <div id="complaintList" class="complaint-list"></div>
       <p id="complaintSourceNote" class="source-note">Showing sample records until the backend is connected.</p>
     </section>
@@ -70,12 +305,12 @@
     <section class="view page-view" id="dashboardView">
       <div class="page-heading"><p class="eyebrow">COMMUNITY AT A GLANCE</p><h1>Impact <span>Dashboard</span></h1><p>A clearer view of issues raised and progress made.</p></div>
       <div class="dashboard-grid">
-        <article class="dash-card"><span class="stat-icon blue">▤</span><small>Total reports</small><strong id="dashTotal">1,248</strong><span class="positive">Community submissions</span></article>
-        <article class="dash-card"><span class="stat-icon green">✓</span><small>Resolved</small><strong id="dashResolved">826</strong><span class="positive">Issues marked resolved</span></article>
-        <article class="dash-card"><span class="stat-icon amber">◷</span><small>In progress</small><strong id="dashProgress">312</strong><span class="neutral">Awaiting completion</span></article>
-        <article class="dash-card"><span class="stat-icon red">⚠</span><small>Needs attention</small><strong id="dashOverdue">110</strong><span class="negative">Requires follow-up</span></article>
+        <article class="dash-card"><span class="stat-icon blue">▤</span><small>Total reports</small><strong id="dashTotal">0</strong><span class="positive">Community submissions</span></article>
+        <article class="dash-card"><span class="stat-icon green">✓</span><small>Resolved</small><strong id="dashResolved">0</strong><span class="positive">Issues marked resolved</span></article>
+        <article class="dash-card"><span class="stat-icon amber">◷</span><small>In progress</small><strong id="dashProgress">0</strong><span class="neutral">Awaiting completion</span></article>
+        <article class="dash-card"><span class="stat-icon red">⚠</span><small>Needs attention</small><strong id="dashOverdue">0</strong><span class="negative">Requires follow-up</span></article>
       </div>
-      <div class="panel chart-panel"><div class="panel-heading"><div><h2>Report status overview</h2><p>Illustrative sample distribution</p></div><span class="pill">Demo data</span></div><div id="statusChart" class="bar-chart"></div></div>
+      <div class="panel chart-panel"><div class="panel-heading"><div><h2>Report status overview</h2><p id="dashboardStatusSubtitle">Real-time status distribution from community submissions</p></div><span class="pill" id="dashboardLivePill">Live Database</span></div><div id="statusChart" class="bar-chart"></div></div>
     </section>
 
     <section class="view page-view" id="aboutView">
@@ -84,16 +319,232 @@
     </section>
 
     <section class="view page-view" id="adminView">
-      <div class="admin-top"><div><p class="eyebrow">STAFF WORKSPACE · DEMO</p><h1>Admin <span>Command Centre</span></h1><p>Review reports, coordinate action and monitor resolution.</p></div><span class="pill warning-pill">Demo mode</span></div>
-      <div class="admin-stats">
-        <article class="dash-card"><small>Total reports</small><strong id="adminTotal">1,248</strong><span>All submitted reports</span></article>
-        <article class="dash-card"><small>Pending review</small><strong id="adminPending">24</strong><span>Awaiting a reviewer</span></article>
-        <article class="dash-card"><small>High priority</small><strong id="adminHigh">18</strong><span>Suggested for attention</span></article>
-        <article class="dash-card"><small>Resolved</small><strong id="adminResolved">826</strong><span>Marked complete</span></article>
+      <div class="admin-top">
+        <div>
+          <p class="eyebrow">STAFF WORKSPACE · PROTOTYPE</p>
+          <h1>Admin <span>Command Centre</span></h1>
+          <p>Review incoming citizen reports, inspect AI screenings, and update resolution statuses.</p>
+        </div>
+        <div class="admin-top-actions">
+          <span class="pill warning-pill">Demo Mode · PIN: 2026</span>
+          <button id="adminRefreshBtn" class="btn btn-sm btn-white" type="button" title="Refresh records from backend">↻ Refresh Data</button>
+          <button id="adminLockBtn" class="btn btn-sm btn-white" type="button" title="Lock admin workspace">🔒 Lock Session</button>
+        </div>
       </div>
-      <div class="panel admin-table-panel"><div class="panel-heading"><div><h2>Complaint review queue</h2><p>Inspect each report and update its status.</p></div><input id="adminSearch" class="small-search" type="search" placeholder="Search reports"></div><div class="table-wrap"><table><thead><tr><th>Report</th><th>Category</th><th>Location</th><th>AI suggestion</th><th>Status</th><th>Update status</th></tr></thead><tbody id="adminTableBody"></tbody></table></div></div>
-      <div class="panel review-note"><span class="review-symbol">✦</span><div><h3>Human-led AI review</h3><p>AI can suggest a category, priority and potential duplicate matches. These are recommendations only. Review the report and evidence before taking action; never automatically reject a report based only on an AI flag.</p></div></div>
+
+      <div class="admin-stats">
+        <article class="dash-card"><small>Total reports</small><strong id="adminTotal">0</strong><span>Live submitted reports</span></article>
+        <article class="dash-card"><small>Pending review</small><strong id="adminPending">0</strong><span>Awaiting staff triage</span></article>
+        <article class="dash-card"><small>High priority</small><strong id="adminHigh">0</strong><span>Critical or high severity</span></article>
+        <article class="dash-card"><small>Resolved</small><strong id="adminResolved">0</strong><span>Marked complete</span></article>
+      </div>
+
+      <div class="panel admin-table-panel">
+        <div class="panel-heading admin-table-header">
+          <div>
+            <h2>Complaint review queue</h2>
+            <p>Search, filter, inspect details, and update live complaint statuses.</p>
+          </div>
+          <div class="admin-queue-count">
+            <span id="adminFilteredCount" class="pill">Showing 0 reports</span>
+          </div>
+        </div>
+
+        <div class="admin-toolbar">
+          <input id="adminSearch" class="admin-search-input" type="search" placeholder="⌕  Search by ID, title, locality, or keyword">
+          <select id="adminStatusFilter" class="admin-filter-select" aria-label="Filter by status">
+            <option value="">All statuses</option>
+            <option value="Reported">Reported</option>
+            <option value="Under Review">Under Review</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+          <select id="adminCategoryFilter" class="admin-filter-select" aria-label="Filter by category">
+            <option value="">All categories</option>
+            <option value="Roads & Infrastructure">Roads & Infrastructure</option>
+            <option value="Waste Management">Waste Management</option>
+            <option value="Water Supply">Water Supply</option>
+            <option value="Street Lighting">Street Lighting</option>
+            <option value="Public Facilities">Public Facilities</option>
+            <option value="Other">Other</option>
+          </select>
+          <select id="adminSeverityFilter" class="admin-filter-select" aria-label="Filter by priority">
+            <option value="">All priorities</option>
+            <option value="Critical">Critical (Level 5)</option>
+            <option value="High">High (Level 4)</option>
+            <option value="Medium">Medium (Level 3)</option>
+            <option value="Low">Low (Level 1-2)</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Ticket ID</th>
+                <th>Report Summary</th>
+                <th>Category</th>
+                <th>Locality</th>
+                <th>Upvotes</th>
+                <th>Hazard Priority</th>
+                <th>Status</th>
+                <th>Update Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel review-note">
+        <span class="review-symbol">✦</span>
+        <div>
+          <h3>Human-led AI verification</h3>
+          <p>AI suggests hazard priority, detected keywords, and potential duplicates based on synthetic training data. These are decision-support recommendations only. Always review citizen evidence and local context before updating or closing a report.</p>
+        </div>
+      </div>
     </section>
+
+    <!-- Demo Admin PIN Modal -->
+    <div id="adminPinModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="adminPinTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-icon">🔒</span>
+          <div>
+            <h2 id="adminPinTitle">Staff Workspace Access</h2>
+            <small>Prototype Demo Authentication</small>
+          </div>
+        </div>
+
+        <div class="modal-disclaimer">
+          <strong>⚠️ Demo Simulation Notice:</strong>
+          <p>This PIN prompt simulates administrative role access for prototype evaluation in the IBM Z Datathon 2026. It is <em>not</em> production cryptographic authentication.</p>
+        </div>
+
+        <form id="adminPinForm" class="modal-form">
+          <label class="field">
+            Enter Demo Access PIN
+            <input type="password" id="adminPinInput" maxlength="8" placeholder="Enter demo PIN (2026)" autocomplete="off" required>
+          </label>
+          <div class="modal-hint">
+            <span>Prototype PIN: <code>2026</code></span>
+            <button type="button" id="adminPinQuickBtn" class="link-btn">Use Demo PIN (2026)</button>
+          </div>
+
+          <div id="adminPinError" class="message error" style="display:none;" role="alert">
+            Incorrect demo PIN. Use <code>2026</code> for prototype evaluation.
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" id="adminPinCancelBtn" class="btn btn-white">Return to Home</button>
+            <button type="submit" id="adminPinSubmitBtn" class="btn btn-primary">Unlock Dashboard <span>→</span></button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Citizen Login & Profile Modal -->
+    <div id="citizenLoginModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="citizenLoginTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <span class="modal-icon">👤</span>
+          <div>
+            <h2 id="citizenLoginTitle">Citizen Profile & Login</h2>
+            <small>Community Reporting Identity</small>
+          </div>
+          <button type="button" id="citizenModalCloseBtn" class="modal-close-icon" aria-label="Close modal">✕</button>
+        </div>
+
+        <div class="modal-disclaimer">
+          <strong>ℹ️ Prototype Evaluation:</strong>
+          <p>Select a preloaded demo citizen profile or enter your details to test citizen reporting, upvoting, and personal submission tracking.</p>
+        </div>
+
+        <div class="demo-profiles-group">
+          <small class="field-hint" style="font-weight:700;margin-bottom:8px;display:block;">Select a demo persona:</small>
+          <div class="demo-profile-buttons">
+            <button type="button" class="btn-demo-profile" data-user="priya.citizen" data-name="Priya Sharma" data-ward="Ward 12, South Zone">
+              <strong>Priya Sharma</strong>
+              <small>Ward 12, South Zone</small>
+            </button>
+            <button type="button" class="btn-demo-profile" data-user="aarav.citizen" data-name="Aarav Patel" data-ward="Central Ward">
+              <strong>Aarav Patel</strong>
+              <small>Central Ward</small>
+            </button>
+          </div>
+        </div>
+
+        <form id="citizenLoginForm" class="modal-form" style="margin-top:16px;">
+          <label class="field">
+            Your Full Name
+            <input type="text" id="citizenNameInput" maxlength="60" placeholder="e.g. Priya Sharma" required>
+          </label>
+          <label class="field">
+            Your Ward / Locality
+            <input type="text" id="citizenWardInput" maxlength="60" placeholder="e.g. Ward 12, South Zone" required>
+          </label>
+
+          <div class="modal-actions">
+            <button type="button" id="citizenCancelBtn" class="btn btn-white">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Profile <span>→</span></button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Complaint Detail Modal -->
+    <div id="complaintDetailModal" class="modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modalComplaintTitle">
+      <div class="modal-card modal-lg">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span id="modalComplaintId" class="badge-ticket"></span>
+            <h2 id="modalComplaintTitle">Complaint Details</h2>
+          </div>
+          <button type="button" id="modalCloseBtn" class="modal-close-icon" aria-label="Close details">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="detail-meta-grid">
+            <div><small>Category</small><strong id="modalCategory"></strong></div>
+            <div><small>Location</small><strong id="modalLocation"></strong></div>
+            <div><small>Submitted By</small><span id="modalCitizen"></span></div>
+            <div><small>Current Status</small><span id="modalStatus" class="status"></span></div>
+            <div><small>Hazard Priority</small><span id="modalPriority"></span></div>
+            <div><small>Community Urgency</small><span id="modalUpvotes" class="upvote-badge"></span></div>
+            <div><small>Submitted At</small><span id="modalDate"></span></div>
+          </div>
+
+          <div class="detail-section">
+            <h3>Full Issue Description</h3>
+            <p id="modalDescription" class="detail-description-text"></p>
+          </div>
+
+          <!-- Real AI Analysis Data (Only when available) -->
+          <div id="modalAiAnalysisBlock" class="detail-section ai-detail-box" style="display:none;">
+            <div class="ai-detail-header">
+              <span>✦</span>
+              <strong>Civic AI Screening Analysis</strong>
+            </div>
+            <div class="ai-detail-content">
+              <div id="modalAiSummaryWrap" style="display:none;">
+                <small class="ai-sublabel">Extractive Summary:</small>
+                <p id="modalAiSummary" class="ai-summary-text"></p>
+              </div>
+              <div id="modalAiKeywordsWrap" style="display:none;">
+                <small class="ai-sublabel">Safety signals identified:</small>
+                <div id="modalAiKeywords" class="ai-keywords-chips"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="modalCloseActionBtn" class="btn btn-primary">Close Details</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <footer class="footer"><div class="footer-brand"><strong>THE UNHEARD CITIZEN</strong><small>Your Voice. A Better Tomorrow.</small></div><p>Building cleaner, safer and more responsive communities.</p><span>© 2026 The Unheard Citizen · Prototype</span></footer>
