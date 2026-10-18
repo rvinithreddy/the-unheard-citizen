@@ -87,26 +87,55 @@ function getCounts() {
     pending: reports.filter(r => ["Reported","Under Review"].includes(r.status)).length,
     high: reports.filter(r => String(r.priority).toLowerCase().includes("high")).length
   };
-}
-function renderStats() {
+}function renderStats() {
   const c = getCounts();
-  const demo = !USE_API;
-  const values = {total:demo?"1,248":c.total.toLocaleString("en-IN"),resolved:demo?"826":c.resolved.toLocaleString("en-IN"),progress:demo?"312":c.progress.toLocaleString("en-IN"),overdue:demo?"110":c.overdue.toLocaleString("en-IN")};
-  [["#totalStat",values.total],["#resolvedStat",values.resolved],["#progressStat",values.progress],["#overdueStat",values.overdue],
-   ["#dashTotal",values.total],["#dashResolved",values.resolved],["#dashProgress",values.progress],["#dashOverdue",values.overdue],
-   ["#adminTotal",values.total],["#adminResolved",values.resolved],["#adminPending",demo?"24":c.pending],["#adminHigh",demo?"18":c.high]
-  ].forEach(([sel,val])=>{const el=$(sel);if(el)el.textContent=val;});
+  const values = {
+    total: c.total.toLocaleString("en-IN"),
+    resolved: c.resolved.toLocaleString("en-IN"),
+    progress: c.progress.toLocaleString("en-IN"),
+    overdue: c.overdue.toLocaleString("en-IN")
+  };
+
+  [
+    ["#totalStat", values.total],
+    ["#resolvedStat", values.resolved],
+    ["#progressStat", values.progress],
+    ["#overdueStat", values.overdue],
+    ["#dashTotal", values.total],
+    ["#dashResolved", values.resolved],
+    ["#dashProgress", values.progress],
+    ["#dashOverdue", values.overdue],
+    ["#adminTotal", values.total],
+    ["#adminResolved", values.resolved],
+    ["#adminPending", c.pending],
+    ["#adminHigh", c.high]
+  ].forEach(([sel, val]) => {
+    const el = $(sel);
+    if (el) el.textContent = val;
+  });
+
   const chart = $("#statusChart");
+
   if (chart) {
     const chartItems = [
-      ["Reported", reports.filter(r=>r.status==="Reported").length || 2],
-      ["Under Review", reports.filter(r=>r.status==="Under Review").length || 1],
-      ["In Progress", reports.filter(r=>r.status==="In Progress").length || 3],
-      ["Resolved", reports.filter(r=>r.status==="Resolved").length || 4],
-      ["Overdue", reports.filter(r=>r.status==="Overdue").length || 1]
+      ["Reported", reports.filter(r => r.status === "Reported").length],
+      ["Under Review", reports.filter(r => r.status === "Under Review").length],
+      ["In Progress", reports.filter(r => r.status === "In Progress").length],
+      ["Resolved", reports.filter(r => r.status === "Resolved").length],
+      ["Overdue", reports.filter(r => r.status === "Overdue").length]
     ];
-    const max = Math.max(...chartItems.map(x=>x[1]),1);
-    chart.innerHTML = chartItems.map(([label,value])=>`<div class="bar-row"><span>${escapeHtml(label)}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.max(5,value/max*100)}%"></div></div><span class="bar-value">${value}</span></div>`).join("");
+
+    const max = Math.max(...chartItems.map(x => x[1]), 1);
+
+    chart.innerHTML = chartItems.map(([label, value]) =>
+      `<div class="bar-row">
+        <span>${escapeHtml(label)}</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${value === 0 ? 0 : Math.max(5, value / max * 100)}%"></div>
+        </div>
+        <span class="bar-value">${value}</span>
+      </div>`
+    ).join("");
   }
 }
 function renderComplaints() {
