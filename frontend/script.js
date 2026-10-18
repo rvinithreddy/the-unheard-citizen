@@ -118,12 +118,13 @@ function getCounts() {
 
   if (chart) {
     const chartItems = [
-      ["Reported", reports.filter(r => r.status === "Reported").length],
-      ["Under Review", reports.filter(r => r.status === "Under Review").length],
-      ["In Progress", reports.filter(r => r.status === "In Progress").length],
-      ["Resolved", reports.filter(r => r.status === "Resolved").length],
-      ["Overdue", reports.filter(r => r.status === "Overdue").length]
-    ];
+     ["Received", reports.filter(r => r.status === "Received").length],
+     ["Reported", reports.filter(r => r.status === "Reported").length],
+     ["Under Review", reports.filter(r => r.status === "Under Review").length],
+     ["In Progress", reports.filter(r => r.status === "In Progress").length],
+     ["Resolved", reports.filter(r => r.status === "Resolved").length],
+     ["Overdue", reports.filter(r => r.status === "Overdue").length]
+];
 
     const max = Math.max(...chartItems.map(x => x[1]), 1);
 
@@ -159,7 +160,9 @@ function renderAdminTable() {
     tbody.innerHTML = '<tr><td colspan="6">No matching reports.</td></tr>';
     return;
   }
-  tbody.innerHTML = filtered.map(r=>`<tr><td><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.id)} · ${escapeHtml(r.created_at || "Date unavailable")}</small></td><td>${escapeHtml(r.category)}</td><td>${escapeHtml(r.location)}</td><td><span class="ai-suggestion">${escapeHtml(r.priority || "Needs review")}</span></td><td><span class="status ${statusClass(r.status)}">${escapeHtml(r.status)}</span></td><td><select class="status-select" data-report-id="${escapeHtml(r.id)}" aria-label="Update status for ${escapeHtml(r.id)}">${["Reported","Under Review","In Progress","Resolved","Overdue"].map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("");
+  tbody.innerHTML = filtered.map(r=>`<tr><td><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.id)} · ${escapeHtml(r.created_at || "Date unavailable")}</small></td><td>${escapeHtml(r.category)}</td><td>${escapeHtml(r.location)}</td><td><span class="ai-suggestion">${escapeHtml(r.priority || "Needs review")}</span></td><td><span class="status ${statusClass(r.status)}">${escapeHtml(r.status)}</span></td><td><select class="status-select" data-report-id="${escapeHtml(r.id)}" aria-label="Update status for ${escapeHtml(r.id)}">
+${["Received","Reported","Under Review","In Progress","Resolved","Overdue"].map(s=>`<option ${s===r.status?"selected":""}>${s}</option>`).join("")}</select></td></tr>`).join("");
+
 }
 function setView(name) {
   $$(".view").forEach(v=>v.classList.remove("active"));
@@ -240,7 +243,7 @@ $("#adminTableBody").addEventListener("change",async event=>{
     }
   }
   row.status=nextStatus;renderAdminTable();renderComplaints();renderStats();
-  showToast(`Demo status updated to "${nextStatus}".`);
+  showToast(`Status updated to "${nextStatus}".`);
 });
 (async function init(){
   await loadReports();
