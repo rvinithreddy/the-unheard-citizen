@@ -9,7 +9,7 @@
  * adjust makePayload() and normalizeComplaint() to match its schema.
  */
 const API_BASE = "http://127.0.0.1:8000";
-const USE_API = false; // Change to true only when your backend is running.
+const USE_API = true; // Change to true only when your backend is running.
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const DEMO_REPORTS = [
@@ -58,7 +58,8 @@ function makePayload(form) {
     title: String(data.get("title") || "").trim(),
     category: String(data.get("category") || "").trim(),
     location: String(data.get("location") || "").trim(),
-    description: String(data.get("description") || "").trim()
+    description: String(data.get("description") || "").trim(),
+     severity: Number(data.get("severity") || 3)
   };
 }
 async function loadReports() {
