@@ -9,7 +9,7 @@
  * adjust makePayload() and normalizeComplaint() to match its schema.
  */
 const API_BASE = "https://the-unheard-citizen-api.onrender.com";
-const USE_API = true; // Change to true only when your backend is running.
+const USE_API = true;
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const DEMO_REPORTS = [
