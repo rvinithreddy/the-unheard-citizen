@@ -234,7 +234,14 @@ $("#adminTableBody").addEventListener("change",async event=>{
   const oldStatus=row.status;
   if(USE_API){
     try{
-      const response=await fetch(`${API_BASE}/api/complaints/${encodeURIComponent(id)}/status`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:nextStatus})});
+const response = await fetch(
+  `${API_BASE}/api/complaints/${encodeURIComponent(id)}/status?status=${encodeURIComponent(nextStatus)}`,
+  {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" }
+  }
+);
+
       if(!response.ok)throw new Error(`API returned ${response.status}`);
     }catch(error){
       select.value=oldStatus;
