@@ -1,12 +1,6 @@
 /*
- * The Unheard Citizen — frontend prototype.
- * Demo mode works without packages or internet.
- * Backend API known from the project: GET/POST /api/complaints and
- * PATCH /api/complaints/{complaint_id}/status.
- *
- * To try the API, start the FastAPI backend at http://127.0.0.1:8000
- * and set USE_API to true below. If your backend field names differ,
- * adjust makePayload() and normalizeComplaint() to match its schema.
+ * The Unheard Citizen — Frontend Client
+ * Connected to FastAPI backend at http://localhost:8000
  */
 const isLocal = typeof window !== "undefined" && (
   !window.location.hostname ||
@@ -15,7 +9,7 @@ const isLocal = typeof window !== "undefined" && (
   window.location.protocol === "file:"
 );
 const API_BASE = isLocal
-  ? "http://127.0.0.1:8000"
+  ? "http://localhost:8000"
   : "https://the-unheard-citizen-api.onrender.com";
 const USE_API = true;
 const $ = (selector) => document.querySelector(selector);
@@ -37,25 +31,39 @@ try {
 } catch (e) {}
 
 let votedComplaints = new Set();
-try {
-  const savedVotes = localStorage.getItem("uc_voted_complaints");
-  if (savedVotes) votedComplaints = new Set(JSON.parse(savedVotes));
-} catch (e) {}
+function loadUserVotes() {
+  votedComplaints = new Set();
+  try {
+    const key = `uc_voted_${currentCitizen.username || "anonymous"}`;
+    const savedVotes = localStorage.getItem(key) || localStorage.getItem("uc_voted_complaints");
+    if (savedVotes) votedComplaints = new Set(JSON.parse(savedVotes));
+  } catch (e) {}
+}
+loadUserVotes();
+
+function saveUserVotes() {
+  try {
+    const key = `uc_voted_${currentCitizen.username || "anonymous"}`;
+    localStorage.setItem(key, JSON.stringify([...votedComplaints]));
+    localStorage.setItem("uc_voted_complaints", JSON.stringify([...votedComplaints]));
+  } catch (e) {}
+}
 
 let filterMyReports = false;
 
 const DEMO_REPORTS = [
-  {id:"UC-1001",title:"Large pothole near the main bus stop",category:"Roads & Infrastructure",location:"Central Market Road",description:"A deep pothole is making the road unsafe for two-wheelers.",status:"In Progress",priority:"High",created_at:"2026-10-15",upvotes:6,citizen_name:"Priya Sharma"},
-  {id:"UC-1002",title:"Garbage overflowing near market",category:"Waste Management",location:"Market Street",description:"Waste has accumulated near the public bins.",status:"Reported",priority:"Medium",created_at:"2026-10-14",upvotes:3,citizen_name:"Aarav Patel"},
-  {id:"UC-1003",title:"Streetlight not working",category:"Street Lighting",location:"Lake View Lane",description:"The streetlight has not worked for several nights.",status:"Resolved",priority:"Medium",created_at:"2026-10-12",upvotes:2,citizen_name:"Anita Deshmukh"},
-  {id:"UC-1004",title:"Wheelchair access blocked",category:"Accessibility Barrier",location:"Community Health Centre",description:"The ramp entrance is blocked by parked vehicles.",status:"Under Review",priority:"High",created_at:"2026-10-16",upvotes:5,citizen_name:"Priya Sharma"},
-  {id:"UC-1005",title:"Irregular water supply",category:"Water Supply",location:"Green Park Colony",description:"Water supply has been irregular this week.",status:"Overdue",priority:"High",created_at:"2026-10-08",upvotes:4,citizen_name:"Karan Verma"}
+  {id:"1001",title:"Large pothole near the main bus stop",category:"Roads & Infrastructure",location:"Central Market Road",description:"A deep pothole is making the road unsafe for two-wheelers.",status:"In Progress",priority:"High",created_at:"2026-10-15",upvotes:6,citizen_name:"Priya Sharma"},
+  {id:"1002",title:"Garbage overflowing near market",category:"Waste Management",location:"Market Street",description:"Waste has accumulated near the public bins.",status:"Reported",priority:"Medium",created_at:"2026-10-14",upvotes:3,citizen_name:"Aarav Patel"},
+  {id:"1003",title:"Streetlight not working",category:"Street Lighting",location:"Lake View Lane",description:"The streetlight has not worked for several nights.",status:"Resolved",priority:"Medium",created_at:"2026-10-12",upvotes:2,citizen_name:"Anita Deshmukh"},
+  {id:"1004",title:"Wheelchair access blocked",category:"Accessibility Barrier",location:"Community Health Centre",description:"The ramp entrance is blocked by parked vehicles.",status:"Under Review",priority:"High",created_at:"2026-10-16",upvotes:5,citizen_name:"Priya Sharma"},
+  {id:"1005",title:"Irregular water supply",category:"Water Supply",location:"Green Park Colony",description:"Water supply has been irregular this week.",status:"Overdue",priority:"High",created_at:"2026-10-08",upvotes:4,citizen_name:"Karan Verma"}
 ];
-let reports = [...DEMO_REPORTS];
+let reports = [];
 let toastTimer;
 
 function showToast(message) {
   const toast = $("#toast");
+  if (!toast) return;
   toast.textContent = message;
   toast.classList.add("show");
   clearTimeout(toastTimer);
@@ -68,7 +76,7 @@ function normalizeComplaint(item, index = 0) {
   const rawSev = Number(item.severity ?? 3);
   const sevPriority = rawSev >= 4 ? "High" : (rawSev >= 3 ? "Medium" : "Low");
   return {
-    id: item.id ?? item.complaint_id ?? item.ticket_id ?? `UC-${1001 + index}`,
+    id: item.id ?? item.complaint_id ?? item.ticket_id ?? (1001 + index),
     title: item.title ?? item.subject ?? "Community report",
     category: item.category ?? "Other",
     location: item.location ?? item.address ?? "Location not provided",
@@ -83,7 +91,21 @@ function normalizeComplaint(item, index = 0) {
 }
 function normalizeStatus(status) {
   const value = String(status || "Reported").toLowerCase().replaceAll("_"," ").replaceAll("-"," ").trim();
-  const known = {"submitted":"Reported","new":"Reported","pending":"Reported","reported":"Reported","under review":"Under Review","in review":"Under Review","in progress":"In Progress","processing":"In Progress","resolved":"Resolved","closed":"Resolved","completed":"Resolved","overdue":"Overdue"};
+  const known = {
+    "submitted":"Reported",
+    "new":"Reported",
+    "pending":"Reported",
+    "reported":"Reported",
+    "received":"Reported",
+    "under review":"Under Review",
+    "in review":"Under Review",
+    "in progress":"In Progress",
+    "processing":"In Progress",
+    "resolved":"Resolved",
+    "closed":"Resolved",
+    "completed":"Resolved",
+    "overdue":"Overdue"
+  };
   return known[value] || (value.charAt(0).toUpperCase() + value.slice(1));
 }
 function statusClass(status) {
@@ -100,14 +122,19 @@ function makePayload(form) {
     citizen_name: String(data.get("citizen_name") || currentCitizen.name || "Anonymous Citizen").trim()
   };
 }
+
 async function loadReports() {
-  if (!USE_API) return;
+  if (!USE_API) {
+    reports = DEMO_REPORTS.map(normalizeComplaint);
+    return;
+  }
   try {
     const response = await fetch(`${API_BASE}/api/complaints`);
-    if (!response.ok) throw new Error(`API returned ${response.status}`);
+    if (!response.ok) throw new Error(`API returned HTTP ${response.status}`);
     const body = await response.json();
     const rows = Array.isArray(body) ? body : (body.complaints ?? body.items ?? body.data ?? []);
     reports = rows.map(normalizeComplaint);
+
     const note = $("#complaintSourceNote");
     if (note) note.textContent = "Connected to backend API (live database records).";
     const dashPill = $("#dashboardLivePill");
@@ -115,11 +142,27 @@ async function loadReports() {
     const dashSub = $("#dashboardStatusSubtitle");
     if (dashSub) dashSub.textContent = "Real-time status distribution from community submissions";
   } catch (error) {
+    reports = DEMO_REPORTS.map(normalizeComplaint);
     const note = $("#complaintSourceNote");
-    if (note) note.textContent = `Could not reach backend at ${API_BASE}. Showing offline sample records.`;
+    if (note) note.textContent = `Could not reach backend at ${API_BASE} (${error.message}). Showing offline fallback records.`;
     console.warn("Complaint API unavailable:", error);
   }
 }
+
+function categoriesMatch(selected, actual) {
+  if (!selected) return true;
+  if (!actual) return false;
+  if (selected.toLowerCase() === actual.toLowerCase()) return true;
+  const s = selected.toLowerCase();
+  const a = actual.toLowerCase();
+  if (s.includes("road") && a.includes("road")) return true;
+  if (s.includes("waste") && (a.includes("waste") || a.includes("garbage"))) return true;
+  if (s.includes("water") && (a.includes("water") || a.includes("leak"))) return true;
+  if (s.includes("light") && (a.includes("light") || a.includes("lamp"))) return true;
+  if (s.includes("public") && (a.includes("public") || a.includes("infrastruct") || a.includes("facil"))) return true;
+  return false;
+}
+
 function getCounts() {
   const normCat = (cat) => String(cat || "").toLowerCase();
   const isHigh = (r) => {
@@ -139,14 +182,14 @@ function getCounts() {
     // Real category counts from backend records
     roadCount: reports.filter(r => normCat(r.category).includes("road")).length,
     wasteCount: reports.filter(r => normCat(r.category).includes("waste") || normCat(r.category).includes("garbage")).length,
-    waterCount: reports.filter(r => normCat(r.category).includes("water")).length,
-    lightCount: reports.filter(r => normCat(r.category).includes("light")).length,
-    publicCount: reports.filter(r => normCat(r.category).includes("public") || normCat(r.category).includes("access") || normCat(r.category).includes("facil")).length,
+    waterCount: reports.filter(r => normCat(r.category).includes("water") || normCat(r.category).includes("leak")).length,
+    lightCount: reports.filter(r => normCat(r.category).includes("light") || normCat(r.category).includes("lamp")).length,
+    publicCount: reports.filter(r => normCat(r.category).includes("public") || normCat(r.category).includes("access") || normCat(r.category).includes("facil") || normCat(r.category).includes("infrastruct")).length,
   };
 }
+
 function renderStats() {
   const c = getCounts();
-
   const values = {
     total: c.total.toLocaleString("en-IN"),
     resolved: c.resolved.toLocaleString("en-IN"),
@@ -169,10 +212,6 @@ function renderStats() {
     ["#homeProgressStat", values.progress],
     ["#homeReviewStat", values.underReview],
     ["#homeAttentionStat", values.high],
-    ["#totalStat", values.total],
-    ["#resolvedStat", values.resolved],
-    ["#progressStat", values.progress],
-    ["#overdueStat", values.overdue],
     // Homepage category counts
     ["#catRoadCount", values.road],
     ["#catWasteCount", values.waste],
@@ -215,6 +254,7 @@ function renderStats() {
     `).join("");
   }
 }
+
 function renderComplaints() {
   const search = ($("#complaintSearch")?.value || "").trim().toLowerCase();
   const status = $("#statusFilter")?.value || "";
@@ -227,7 +267,7 @@ function renderComplaints() {
 
   const filtered = reports.filter(r => {
     if (status && r.status !== status) return false;
-    if (category && r.category !== category) return false;
+    if (category && !categoriesMatch(category, r.category)) return false;
     if (filterMyReports) {
       const myName = (currentCitizen.name || "").toLowerCase().trim();
       const reportCitizen = String(r.citizen_name || "").toLowerCase().trim();
@@ -242,6 +282,8 @@ function renderComplaints() {
   });
 
   const list = $("#complaintList");
+  if (!list) return;
+
   if (!filtered.length) {
     list.innerHTML = filterMyReports
       ? `<div class="empty-state">You have not submitted any reports under profile "<strong>${escapeHtml(currentCitizen.name)}</strong>" yet. Click "Report Issue" to submit your first report!</div>`
@@ -269,6 +311,7 @@ function renderComplaints() {
     </article>
   `).join("");
 }
+
 function getPriorityBadgeHtml(priority, severity) {
   const p = String(priority || "").toLowerCase();
   const s = Number(severity || 0);
@@ -303,14 +346,15 @@ function renderAdminTable() {
         String(r.category),
         String(r.location),
         String(r.description),
-        String(r.status)
+        String(r.status),
+        String(r.citizen_name || "")
       ].some(v => v.toLowerCase().includes(search));
       if (!matches) return false;
     }
     // Status filter
     if (statusFilter && r.status !== statusFilter) return false;
     // Category filter
-    if (categoryFilter && r.category !== categoryFilter) return false;
+    if (categoryFilter && !categoriesMatch(categoryFilter, r.category)) return false;
     // Severity / Priority filter
     if (severityFilter) {
       const p = String(r.priority || "").toLowerCase();
@@ -328,6 +372,8 @@ function renderAdminTable() {
   if (countBadge) {
     countBadge.textContent = `Showing ${filtered.length} of ${reports.length} reports`;
   }
+
+  if (!tbody) return;
 
   if (!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">No matching reports found with the selected filters.</td></tr>';
@@ -401,7 +447,7 @@ function openComplaintDetail(id) {
     `;
   }
 
-  $("#modalDate").textContent = row.created_at || "Recent";
+  $("#modalDate").textContent = row.created_at ? row.created_at.slice(0, 10) : "Recent";
   $("#modalDescription").textContent = row.description;
 
   // Real AI data display only when available
@@ -459,20 +505,58 @@ function requestAdminAccess() {
   }
 }
 
-function unlockAdminSession() {
+async function unlockAdminSession() {
   const input = $("#adminPinInput");
   const val = (input?.value || "").trim();
+  const err = $("#adminPinError");
+
+  if (!val) {
+    if (err) {
+      err.textContent = "Please enter the admin PIN.";
+      err.style.display = "block";
+    }
+    return;
+  }
+
+  if (USE_API) {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "admin", role: "admin", pin: val })
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || "Authentication failed");
+      }
+      sessionStorage.setItem("uc_admin_demo_auth", "true");
+      const modal = $("#adminPinModal");
+      if (modal) modal.style.display = "none";
+      if (err) err.style.display = "none";
+      setView("admin");
+      showToast("Staff Workspace unlocked in Demo Mode.");
+      return;
+    } catch (e) {
+      if (err) {
+        err.textContent = e.message || "Incorrect admin PIN. Use 2026 for demo access.";
+        err.style.display = "block";
+      }
+      return;
+    }
+  }
+
   if (val === "2026") {
     sessionStorage.setItem("uc_admin_demo_auth", "true");
     const modal = $("#adminPinModal");
     if (modal) modal.style.display = "none";
-    const err = $("#adminPinError");
     if (err) err.style.display = "none";
     setView("admin");
     showToast("Staff Workspace unlocked in Demo Mode.");
   } else {
-    const err = $("#adminPinError");
-    if (err) err.style.display = "block";
+    if (err) {
+      err.textContent = "Incorrect demo PIN. Use 2026 for prototype evaluation.";
+      err.style.display = "block";
+    }
   }
 }
 
@@ -494,6 +578,8 @@ function openCitizenLoginModal() {
   const wardInput = $("#citizenWardInput");
   if (nameInput) nameInput.value = currentCitizen.name;
   if (wardInput) wardInput.value = currentCitizen.ward;
+  const err = $("#citizenModalError");
+  if (err) err.style.display = "none";
   modal.style.display = "flex";
 }
 
@@ -503,22 +589,90 @@ function closeCitizenLoginModal() {
 }
 
 async function saveCitizenProfile(name, ward, username = null) {
-  currentCitizen.name = name.trim();
-  currentCitizen.ward = ward.trim();
-  currentCitizen.username = (username || name.toLowerCase().replace(/\s+/g, ".") + ".citizen").trim();
+  const modalErr = $("#citizenModalError");
+  if (modalErr) modalErr.style.display = "none";
+
+  const cleanName = (name || "").trim();
+  const cleanWard = (ward || "Central Ward").trim();
+  const cleanUsername = (username || cleanName.toLowerCase().replace(/[^a-z0-9]/g, ".") + ".citizen").replace(/\.+/g, ".").replace(/^\.|\.$/g, "");
+
+  if (USE_API) {
+    let authUser = null;
+    if (username) {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: cleanUsername, role: "citizen" })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          authUser = data.user;
+        }
+      } catch (err) {
+        console.warn("Login sync failed:", err);
+      }
+    } else {
+      try {
+        const regRes = await fetch(`${API_BASE}/api/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: cleanUsername, name: cleanName, ward: cleanWard })
+        });
+        if (regRes.ok) {
+          const data = await regRes.json();
+          authUser = data.user;
+        } else if (regRes.status === 400) {
+          // Username already registered, log in
+          const loginRes = await fetch(`${API_BASE}/api/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: cleanUsername, role: "citizen" })
+          });
+          if (loginRes.ok) {
+            const data = await loginRes.json();
+            authUser = data.user;
+          } else {
+            const errData = await loginRes.json().catch(() => ({}));
+            throw new Error(errData.detail || `Login error (${loginRes.status})`);
+          }
+        } else {
+          const errData = await regRes.json().catch(() => ({}));
+          throw new Error(errData.detail || `Registration error (${regRes.status})`);
+        }
+      } catch (err) {
+        if (modalErr) {
+          modalErr.textContent = err.message || "Failed to authenticate profile.";
+          modalErr.style.display = "block";
+        }
+        showToast(`Auth error: ${err.message}`);
+        console.error("Auth error:", err);
+        return;
+      }
+    }
+
+    if (authUser) {
+      currentCitizen.id = authUser.id;
+      currentCitizen.username = authUser.username;
+      currentCitizen.name = authUser.name;
+      currentCitizen.ward = authUser.ward || cleanWard;
+    } else {
+      currentCitizen.name = cleanName;
+      currentCitizen.ward = cleanWard;
+      currentCitizen.username = cleanUsername;
+    }
+  } else {
+    currentCitizen.name = cleanName;
+    currentCitizen.ward = cleanWard;
+    currentCitizen.username = cleanUsername;
+  }
+
   try {
     sessionStorage.setItem("uc_citizen_profile", JSON.stringify(currentCitizen));
     localStorage.setItem("uc_citizen_profile", JSON.stringify(currentCitizen));
   } catch (e) {}
 
-  if (USE_API) {
-    fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: currentCitizen.username, role: "citizen" })
-    }).catch(e => console.warn("Citizen auth sync notice:", e));
-  }
-
+  loadUserVotes();
   updateCitizenUI();
   closeCitizenLoginModal();
   renderComplaints();
@@ -536,12 +690,6 @@ async function upvoteComplaint(rawId) {
     return;
   }
 
-  // Optimistic UI update
-  votedComplaints.add(idStr);
-  try {
-    localStorage.setItem("uc_voted_complaints", JSON.stringify([...votedComplaints]));
-  } catch (e) {}
-
   if (USE_API) {
     try {
       const response = await fetch(`${API_BASE}/api/complaints/${encodeURIComponent(numericId)}/upvote`, {
@@ -550,18 +698,31 @@ async function upvoteComplaint(rawId) {
         body: JSON.stringify({ user_identifier: currentCitizen.username || "anonymous" })
       });
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.detail || `HTTP ${response.status}`);
       }
       const data = await response.json();
+      if (data.already_upvoted) {
+        votedComplaints.add(idStr);
+        saveUserVotes();
+        renderComplaints();
+        renderAdminTable();
+        showToast(data.message || `You have already upvoted ticket #${row.id}.`);
+        return;
+      }
       row.upvotes = data.upvotes;
+      votedComplaints.add(idStr);
+      saveUserVotes();
       showToast(`▲ Upvote registered for ticket #${row.id} (${row.upvotes} total votes)`);
     } catch (err) {
-      console.warn("Upvote API error, fallback to local:", err);
-      row.upvotes = (row.upvotes || 0) + 1;
-      showToast(`▲ Upvoted ticket #${row.id} (${row.upvotes} votes)`);
+      showToast(`Upvote failed: ${err.message}`);
+      console.warn("Upvote API error:", err);
+      return;
     }
   } else {
     row.upvotes = (row.upvotes || 0) + 1;
+    votedComplaints.add(idStr);
+    saveUserVotes();
     showToast(`▲ Demo upvoted ticket #${row.id} (${row.upvotes} votes)`);
   }
 
@@ -579,19 +740,24 @@ function setView(name) {
     requestAdminAccess();
     return;
   }
-  $$(".view").forEach(v=>v.classList.remove("active"));
+  $$(".view").forEach(v => v.classList.remove("active"));
   const target = $(`#${name}View`);
-  if(target) target.classList.add("active");
-  $$(".nav-link").forEach(b=>b.classList.toggle("active", b.dataset.view===name || (name==="complaints" && (b.dataset.view==="track" || b.id==="navComplaints"))));
-  $("#mainNav").classList.remove("open");
-  window.scrollTo({top:0,behavior:"smooth"});
-  if(name==="home")renderStats();
-  if(name==="complaints")renderComplaints();
-  if(name==="dashboard")renderStats();
-  if(name==="admin"){renderAdminTable();renderStats();}
+  if (target) target.classList.add("active");
+  $$(".nav-link").forEach(b => b.classList.toggle("active", b.dataset.view === name || (name === "complaints" && (b.dataset.view === "track" || b.id === "navComplaints"))));
+  $("#mainNav")?.classList.remove("open");
+  window.scrollTo({top:0, behavior:"smooth"});
+  if (name === "home") renderStats();
+  if (name === "report") updateCitizenUI();
+  if (name === "complaints") renderComplaints();
+  if (name === "dashboard") renderStats();
+  if (name === "admin") { renderAdminTable(); renderStats(); }
 }
-function openReport(category="") {
-  if(category) $("#issueCategory").value=category;
+
+function openReport(category = "") {
+  if (category) {
+    const select = $("#issueCategory");
+    if (select) select.value = category;
+  }
   resetAICard();
   setView("report");
 }
@@ -839,25 +1005,30 @@ function renderAIResults(data) {
   }
 }
 
-$$("[data-view]").forEach(button => button.addEventListener("click", () => {
-  if (button.dataset.view === "admin") {
+// Navigation button handlers
+$$("[data-view]").forEach(button => button.addEventListener("click", (e) => {
+  e.preventDefault();
+  const targetView = button.dataset.view;
+  if (targetView === "admin") {
     requestAdminAccess();
   } else {
-    setView(button.dataset.view);
+    setView(targetView);
   }
 }));
+
 $$(".category-card").forEach(button => button.addEventListener("click", () => openReport(button.dataset.category)));
 
-const referenceAdminButton = $("#referenceAdminButton");
-if (referenceAdminButton) referenceAdminButton.addEventListener("click", requestAdminAccess);
-
-$("#menuToggle")?.addEventListener("click", () => $("#mainNav").classList.toggle("open"));
+$("#menuToggle")?.addEventListener("click", () => $("#mainNav")?.classList.toggle("open"));
 $("#adminModeBtn")?.addEventListener("click", requestAdminAccess);
+$("#mobileAdminBtn")?.addEventListener("click", requestAdminAccess);
 
+// Complaint search & filters
 ["#complaintSearch", "#statusFilter", "#categoryFilter"].forEach(sel => {
   $(sel)?.addEventListener("input", renderComplaints);
   $(sel)?.addEventListener("change", renderComplaints);
 });
+
+// Admin table search & filters
 ["#adminSearch", "#adminStatusFilter", "#adminCategoryFilter", "#adminSeverityFilter"].forEach(sel => {
   $(sel)?.addEventListener("input", renderAdminTable);
   $(sel)?.addEventListener("change", renderAdminTable);
@@ -926,7 +1097,6 @@ $("#citizenLoginBtn")?.addEventListener("click", openCitizenLoginModal);
 $("#mobileCitizenBtn")?.addEventListener("click", openCitizenLoginModal);
 $("#citizenModalCloseBtn")?.addEventListener("click", closeCitizenLoginModal);
 $("#citizenCancelBtn")?.addEventListener("click", closeCitizenLoginModal);
-$("#mobileAdminBtn")?.addEventListener("click", requestAdminAccess);
 
 $$(".btn-demo-profile").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -952,6 +1122,7 @@ $("#myReportsBtn")?.addEventListener("click", () => {
   showToast(filterMyReports ? `Filtering reports by "${currentCitizen.name}"` : "Showing all community reports");
 });
 
+// Admin status change handler
 $("#adminTableBody")?.addEventListener("change", async event => {
   const select = event.target.closest("select[data-report-id]");
   if (!select) return;
@@ -994,6 +1165,7 @@ $("#adminTableBody")?.addEventListener("change", async event => {
   renderStats();
 });
 
+// AI suggestions input events
 $("#issueTitle")?.addEventListener("input", triggerAIAnalysis);
 $("#issueDescription")?.addEventListener("input", triggerAIAnalysis);
 $("#aiRetryBtn")?.addEventListener("click", () => {
@@ -1019,6 +1191,7 @@ $("#applyCategoryBtn")?.addEventListener("click", () => {
   }
 });
 
+// Report Form submission
 $("#reportForm")?.addEventListener("submit", async event => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -1026,6 +1199,20 @@ $("#reportForm")?.addEventListener("submit", async event => {
   const payload = makePayload(form);
   const message = $("#reportMessage");
   const submit = form.querySelector('button[type="submit"]');
+
+  if (payload.title.length < 5) {
+    message.hidden = false;
+    message.className = "message error";
+    message.textContent = "Issue title must be at least 5 characters.";
+    return;
+  }
+  if (payload.description.length < 10) {
+    message.hidden = false;
+    message.className = "message error";
+    message.textContent = "Issue description must be at least 10 characters.";
+    return;
+  }
+
   submit.disabled = true;
   submit.textContent = "Submitting…";
   try {
@@ -1036,7 +1223,20 @@ $("#reportForm")?.addEventListener("submit", async event => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error(`Submission failed (${response.status}). Check backend request fields.`);
+      if (!response.ok) {
+        let errorDetail = `Submission failed (${response.status})`;
+        try {
+          const errData = await response.json();
+          if (errData.detail) {
+            if (Array.isArray(errData.detail)) {
+              errorDetail = errData.detail.map(d => `${d.loc ? d.loc.slice(1).join('.') + ': ' : ''}${d.msg}`).join('; ');
+            } else {
+              errorDetail = errData.detail;
+            }
+          }
+        } catch (_) {}
+        throw new Error(errorDetail);
+      }
       created = normalizeComplaint(await response.json(), reports.length);
     } else {
       created = {
@@ -1056,7 +1256,7 @@ $("#reportForm")?.addEventListener("submit", async event => {
     reports.unshift(created);
     message.hidden = false;
     message.className = "message success";
-    message.textContent = `Report submitted in ${USE_API ? "connected API" : "demo mode"}. Reference ID: #${created.id}. Keep this ID to track progress.`;
+    message.textContent = `Report submitted successfully! Ticket Reference ID: #${created.id}. You can track it in Track Complaints.`;
     form.reset();
     resetAICard();
     updateCitizenUI();
@@ -1067,17 +1267,37 @@ $("#reportForm")?.addEventListener("submit", async event => {
   } catch (error) {
     message.hidden = false;
     message.className = "message error";
-    message.textContent = `We couldn't submit the report. ${error.message}`;
+    message.textContent = `Could not submit report: ${error.message}`;
   } finally {
     submit.disabled = false;
     submit.innerHTML = 'Submit Report <span>→</span>';
   }
 });
 
-(async function init(){
+// Close modals when clicking outside modal card on backdrop
+[
+  ["#complaintDetailModal", closeComplaintDetail],
+  ["#citizenLoginModal", closeCitizenLoginModal],
+  ["#adminPinModal", () => {
+    const modal = $("#adminPinModal");
+    if (modal) modal.style.display = "none";
+    setView("home");
+  }]
+].forEach(([modalId, closeFn]) => {
+  $(modalId)?.addEventListener("click", (e) => {
+    if (e.target === $(modalId)) closeFn();
+  });
+});
+
+// Initialization
+(async function init() {
   updateCitizenUI();
   await loadReports();
-  renderComplaints();renderAdminTable();renderStats();
-  if(!USE_API) $("#complaintSourceNote").textContent="Demo mode: sample records and locally-created reports are shown in this browser only. They are not saved to the backend.";
+  renderComplaints();
+  renderAdminTable();
+  renderStats();
+  if (!USE_API) {
+    const note = $("#complaintSourceNote");
+    if (note) note.textContent = "Demo mode: sample records and locally-created reports are shown in this browser only.";
+  }
 })();
-

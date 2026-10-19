@@ -204,7 +204,7 @@
       <form id="reportForm" class="form-card">
         <div class="form-progress"><span class="step-current">1</span><span>Issue details</span><i></i><span class="step-muted">2</span><span>Review & submit</span></div>
         <div class="form-grid">
-          <label class="field full">Issue title <em>*</em><input id="issueTitle" name="title" required maxlength="120" placeholder="e.g. Large pothole near the bus stop"></label>
+          <label class="field full">Issue title <em>*</em><input id="issueTitle" name="title" required minlength="5" maxlength="120" placeholder="e.g. Large pothole near the bus stop"></label>
           <label class="field">Issue category <em>*</em><select id="issueCategory" name="category" required><option value="">Select a category</option><option>Roads & Infrastructure</option><option>Waste Management</option><option>Water Supply</option><option>Street Lighting</option><option>Public Facilities</option><option>Accessibility Barrier</option><option>Community Support Gap</option><option>Other</option></select></label>
           <label class="field">Location / locality <em>*</em><input id="issueLocation" name="location" required maxlength="180" placeholder="Street, area, town or landmark"></label>
           <label class="field">Reporting citizen<input id="issueCitizenName" name="citizen_name" maxlength="100" placeholder="Priya Sharma (or Anonymous Citizen)"><small class="field-hint">Auto-filled from active citizen profile.</small></label>
@@ -310,9 +310,17 @@
         <article class="dash-card"><span class="stat-icon amber">◷</span><small>In progress</small><strong id="dashProgress">0</strong><span class="neutral">Awaiting completion</span></article>
         <article class="dash-card"><span class="stat-icon red">⚠</span><small>Needs attention</small><strong id="dashOverdue">0</strong><span class="negative">Requires follow-up</span></article>
       </div>
-      <div class="panel chart-panel"><div class="panel-heading"><div><h2>Report status overview</h2><p id="dashboardStatusSubtitle">Real-time status distribution from community submissions</p></div><span class="pill" id="dashboardLivePill">Live Database</span></div><div id="statusChart" class="bar-chart"></div></div>
+      <div class="panel chart-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Report status overview</h2>
+            <p id="dashboardStatusSubtitle">Real-time status distribution from community submissions</p>
+          </div>
+          <span class="pill" id="dashboardLivePill">Live Database</span>
+        </div>
+        <div id="statusChart" class="bar-chart"></div>
+      </div>
     </section>
-
     <section class="view page-view" id="aboutView">
       <div class="page-heading"><p class="eyebrow">OUR PURPOSE</p><h1>Every voice <span>matters.</span></h1><p>The Unheard Citizen helps communities raise concerns, follow progress and make local services more accountable.</p></div>
       <div class="about-grid"><article class="about-card"><span>◎</span><h2>Transparent tracking</h2><p>Reports should have clear statuses and updates, so citizens can understand what happens next.</p></article><article class="about-card"><span>♧</span><h2>Community-led</h2><p>People can bring overlooked local problems to attention and help decision-makers see recurring needs.</p></article><article class="about-card"><span>✦</span><h2>AI-assisted review</h2><p>AI may suggest categories, priority and possible duplicates. A human reviewer remains responsible for decisions.</p></article></div>
@@ -477,6 +485,7 @@
         </div>
 
         <form id="citizenLoginForm" class="modal-form" style="margin-top:16px;">
+          <div id="citizenModalError" class="message error" style="display:none;" role="alert"></div>
           <label class="field">
             Your Full Name
             <input type="text" id="citizenNameInput" maxlength="60" placeholder="e.g. Priya Sharma" required>
