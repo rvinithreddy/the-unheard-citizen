@@ -9,12 +9,20 @@ venv/
 .env
 .env.*
 
-# Local databases
+# Local databases and database backups
 *.db
+*.db.bak
+*.db.*.bak
 *.sqlite
 *.sqlite3
+
+# Backups and temporary files
+*.bak
+*.step*.bak
+scratch/
 
 # Editor and operating system files
 .vscode/
 .DS_Store
 Thumbs.db
+

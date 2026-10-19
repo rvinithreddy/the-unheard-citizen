@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import sqlite3
 from contextlib import asynccontextmanager
@@ -13,9 +14,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 
-# Preserve the existing database location (relative to the project launch directory).
+# Resolve database and artifact paths reliably regardless of execution working directory.
 BASE_DIR = Path(__file__).resolve().parent
-DATABASE = Path("the_unheard_citizen.db")
+REPO_ROOT = BASE_DIR.parent
+ENV_DB = os.getenv("DATABASE_PATH")
+if ENV_DB:
+    DATABASE = Path(ENV_DB).resolve()
+elif (REPO_ROOT / "the_unheard_citizen.db").exists():
+    DATABASE = (REPO_ROOT / "the_unheard_citizen.db").resolve()
+elif (BASE_DIR / "the_unheard_citizen.db").exists():
+    DATABASE = (BASE_DIR / "the_unheard_citizen.db").resolve()
+else:
+    DATABASE = (REPO_ROOT / "the_unheard_citizen.db").resolve()
+
 AI_ARTIFACTS_DIR = BASE_DIR / "ai_artifacts"
 MODEL_PATH = AI_ARTIFACTS_DIR / "complaint_ai_model.joblib"
 CSV_PATH = AI_ARTIFACTS_DIR / "civic_complaints.csv"
@@ -51,28 +62,95 @@ def load_ai_artifacts() -> None:
         ai_model = None
 
 
+ALLOWED_STATUSES = {
+    "Reported",
+    "Received",
+    "Under Review",
+    "In Progress",
+    "Resolved",
+    "Overdue",
+}
+STATUS_CANONICAL_MAP = {s.lower(): s for s in ALLOWED_STATUSES}
+
+
 def get_db():
-    connection = sqlite3.connect(str(DATABASE))
+    connection = sqlite3.connect(str(DATABASE), check_same_thread=False)
     connection.row_factory = sqlite3.Row
     return connection
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with get_db() as db:                         
+    with get_db() as db:
         db.execute(
             """
             CREATE TABLE IF NOT EXISTS complaints (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 category TEXT NOT NULL,
+                location TEXT NOT NULL DEFAULT 'Location not provided',
                 description TEXT NOT NULL,
                 severity INTEGER NOT NULL,
-                status TEXT NOT NULL DEFAULT 'Received',
+                status TEXT NOT NULL DEFAULT 'Reported',
+                created_at TEXT NOT NULL,
+                upvotes INTEGER NOT NULL DEFAULT 0,
+                citizen_name TEXT NOT NULL DEFAULT 'Anonymous Citizen'
+            )
+            """
+        )
+        # Safe migrations for existing SQLite databases
+        columns = [row["name"] for row in db.execute("PRAGMA table_info(complaints)").fetchall()]
+        if "location" not in columns:
+            db.execute("ALTER TABLE complaints ADD COLUMN location TEXT NOT NULL DEFAULT 'Location not provided'")
+        if "upvotes" not in columns:
+            db.execute("ALTER TABLE complaints ADD COLUMN upvotes INTEGER NOT NULL DEFAULT 0")
+        if "citizen_name" not in columns:
+            db.execute("ALTER TABLE complaints ADD COLUMN citizen_name TEXT NOT NULL DEFAULT 'Anonymous Citizen'")
+
+        # Create users table for citizen and admin roles
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'citizen',
+                ward TEXT DEFAULT 'Central Ward',
+                pin TEXT DEFAULT '2026',
                 created_at TEXT NOT NULL
             )
             """
         )
+
+        # Create upvotes_log table to track user votes and prevent duplicate votes
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS upvotes_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                complaint_id INTEGER NOT NULL,
+                user_identifier TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE(complaint_id, user_identifier)
+            )
+            """
+        )
+
+        # Seed default prototype accounts if table is empty
+        user_count = db.execute("SELECT COUNT(*) as count FROM users").fetchone()["count"]
+        if user_count == 0:
+            now_str = datetime.now(timezone.utc).isoformat()
+            db.execute(
+                """
+                INSERT INTO users (username, name, role, ward, pin, created_at)
+                VALUES
+                    ('priya.citizen', 'Priya Sharma', 'citizen', 'Ward 12, South Zone', '2026', ?),
+                    ('aarav.citizen', 'Aarav Patel', 'citizen', 'Central Ward', '2026', ?),
+                    ('admin', 'Municipal Staff Administrator', 'admin', 'City Operations Centre', '2026', ?)
+                """,
+                (now_str, now_str, now_str),
+            )
+        db.commit()
+
     load_ai_artifacts()
     yield
 
@@ -90,8 +168,16 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:5500",
         "http://127.0.0.1:5500",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
         "https://the-unheard-citizen-frontend.vercel.app",
+        "null",
     ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -101,8 +187,30 @@ app.add_middleware(
 class ComplaintCreate(BaseModel):
     title: str = Field(min_length=5, max_length=150)
     category: str = Field(min_length=1, max_length=50)
+    location: str | None = Field(default="Location not provided", max_length=180)
     description: str = Field(min_length=10, max_length=2000)
-    severity: int = Field(ge=1, le=5)
+    severity: int = Field(default=3, ge=1, le=5)
+    citizen_name: str | None = Field(default="Anonymous Citizen", max_length=100)
+
+
+class ComplaintStatusUpdate(BaseModel):
+    status: str = Field(min_length=1, max_length=50)
+
+
+class UpvoteRequest(BaseModel):
+    user_identifier: str | None = Field(default="anonymous", max_length=100)
+
+
+class AuthLoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=60)
+    role: str = Field(default="citizen", max_length=20)
+    pin: str | None = Field(default=None, max_length=20)
+
+
+class AuthRegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=60)
+    name: str = Field(min_length=2, max_length=100)
+    ward: str | None = Field(default="Central Ward", max_length=100)
 
 
 class AIAnalysisRequest(BaseModel):
@@ -219,7 +327,7 @@ def _find_similar(text: str, limit: int = 3) -> list[dict]:
         with get_db() as db:
             rows = db.execute(
                 """
-                SELECT id, title, category, description, status
+                SELECT id, title, category, location, description, status
                 FROM complaints
                 ORDER BY id DESC
                 LIMIT 300
@@ -238,6 +346,7 @@ def _find_similar(text: str, limit: int = 3) -> list[dict]:
                 "complaint_id": row["id"],
                 "title": row["title"],
                 "category": row["category"],
+                "location": row["location"] if "location" in row.keys() else "Location not provided",
                 "description": row["description"],
                 "status": row["status"],
                 "text": candidate_text,
@@ -278,6 +387,7 @@ def _find_similar(text: str, limit: int = 3) -> list[dict]:
             "complaint_id": item["complaint_id"],
             "title": item["title"][:150],
             "category": item["category"],
+            "location": item.get("location", "Location not provided"),
             "status": item["status"],
             "similarity": round(score, 4),
             "source": "database",
@@ -292,6 +402,8 @@ def _find_similar(text: str, limit: int = 3) -> list[dict]:
 
 
 def analyze_text(title: str, description: str) -> dict:
+    if ai_model is None:
+        load_ai_artifacts()
     combined = _text_for_model(title, description)
     category_result = _predict_category(combined)
     severity_result = _assess_severity(combined)
@@ -341,19 +453,32 @@ def analyze_complaint(request: AIAnalysisRequest):
 
 @app.post("/api/complaints", status_code=201)
 def create_complaint(complaint: ComplaintCreate):
+    cleaned_location = (
+        complaint.location.strip()
+        if complaint.location and complaint.location.strip()
+        else "Location not provided"
+    )
+    cleaned_citizen = (
+        complaint.citizen_name.strip()
+        if complaint.citizen_name and complaint.citizen_name.strip()
+        else "Anonymous Citizen"
+    )
     with get_db() as db:
         cursor = db.execute(
             """
             INSERT INTO complaints
-            (title, category, description, severity, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            (title, category, location, description, severity, status, created_at, upvotes, citizen_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
             """,
             (
-                complaint.title,
-                complaint.category,
-                complaint.description,
+                complaint.title.strip(),
+                complaint.category.strip(),
+                cleaned_location,
+                complaint.description.strip(),
                 complaint.severity,
+                "Reported",
                 datetime.now(timezone.utc).isoformat(),
+                cleaned_citizen,
             ),
         )
         complaint_id = cursor.lastrowid
@@ -390,19 +515,35 @@ def list_complaints(
 
 
 @app.patch("/api/complaints/{complaint_id}/status")
-def update_status(complaint_id: int, status: str):
-    allowed = {"Received", "Under Review", "In Progress", "Resolved"}
+def update_status(
+    complaint_id: int,
+    payload: ComplaintStatusUpdate | None = None,
+    status: str | None = None,
+):
+    incoming_status = None
+    if payload and payload.status:
+        incoming_status = payload.status
+    elif status:
+        incoming_status = status
 
-    if status not in allowed:
+    if not incoming_status or not incoming_status.strip():
         raise HTTPException(
             status_code=400,
-            detail="Invalid complaint status",
+            detail="Status value is required in the request body or as a query parameter",
+        )
+
+    normalized_status = STATUS_CANONICAL_MAP.get(incoming_status.strip().lower())
+    if not normalized_status:
+        valid_options = ", ".join(sorted(ALLOWED_STATUSES))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid complaint status '{incoming_status}'. Allowed statuses: {valid_options}",
         )
 
     with get_db() as db:
         cursor = db.execute(
             "UPDATE complaints SET status = ? WHERE id = ?",
-            (status, complaint_id),
+            (normalized_status, complaint_id),
         )
 
         if cursor.rowcount == 0:
@@ -417,3 +558,122 @@ def update_status(complaint_id: int, status: str):
         ).fetchone()
 
     return dict(row)
+
+
+@app.post("/api/complaints/{complaint_id}/upvote")
+def upvote_complaint(complaint_id: int, payload: UpvoteRequest | None = None):
+    user_id = (
+        payload.user_identifier.strip()
+        if payload and payload.user_identifier and payload.user_identifier.strip()
+        else "anonymous"
+    )
+    with get_db() as db:
+        complaint = db.execute("SELECT * FROM complaints WHERE id = ?", (complaint_id,)).fetchone()
+        if not complaint:
+            raise HTTPException(status_code=404, detail="Complaint not found")
+
+        # Check if user already upvoted this complaint
+        existing = db.execute(
+            "SELECT * FROM upvotes_log WHERE complaint_id = ? AND user_identifier = ?",
+            (complaint_id, user_id),
+        ).fetchone()
+
+        if existing and user_id != "anonymous":
+            return {
+                "already_upvoted": True,
+                "upvotes": complaint["upvotes"],
+                "complaint": dict(complaint),
+                "message": "You have already upvoted this complaint.",
+            }
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        if user_id != "anonymous":
+            db.execute(
+                "INSERT OR IGNORE INTO upvotes_log (complaint_id, user_identifier, created_at) VALUES (?, ?, ?)",
+                (complaint_id, user_id, now_iso),
+            )
+        db.execute(
+            "UPDATE complaints SET upvotes = upvotes + 1 WHERE id = ?",
+            (complaint_id,),
+        )
+        db.commit()
+        updated = db.execute("SELECT * FROM complaints WHERE id = ?", (complaint_id,)).fetchone()
+
+    return {
+        "already_upvoted": False,
+        "upvotes": updated["upvotes"],
+        "complaint": dict(updated),
+        "message": "Upvote registered successfully.",
+    }
+
+
+@app.post("/api/auth/login")
+def auth_login(req: AuthLoginRequest):
+    username = req.username.strip().lower()
+    role = req.role.strip().lower()
+    with get_db() as db:
+        user = db.execute("SELECT * FROM users WHERE LOWER(username) = ?", (username,)).fetchone()
+        if role == "admin":
+            if req.pin != "2026":
+                raise HTTPException(status_code=401, detail="Invalid admin PIN. Use 2026 for demo access.")
+            if not user or user["role"] != "admin":
+                user = db.execute("SELECT * FROM users WHERE role = 'admin'").fetchone()
+        else:
+            if not user:
+                now_iso = datetime.now(timezone.utc).isoformat()
+                cursor = db.execute(
+                    "INSERT INTO users (username, name, role, ward, pin, created_at) VALUES (?, ?, 'citizen', 'Central Ward', '2026', ?)",
+                    (username, username.replace('.', ' ').title(), now_iso),
+                )
+                db.commit()
+                user = db.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+    return {
+        "authenticated": True,
+        "role": user["role"],
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "name": user["name"],
+            "role": user["role"],
+            "ward": user["ward"],
+        },
+        "demo_notice": "Demo simulation authentication for IBM Z Datathon 2026.",
+    }
+
+
+@app.post("/api/auth/register", status_code=201)
+def auth_register(req: AuthRegisterRequest):
+    username = req.username.strip().lower()
+    with get_db() as db:
+        existing = db.execute("SELECT * FROM users WHERE LOWER(username) = ?", (username,)).fetchone()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already exists. Please log in.")
+        now_iso = datetime.now(timezone.utc).isoformat()
+        cursor = db.execute(
+            "INSERT INTO users (username, name, role, ward, pin, created_at) VALUES (?, ?, 'citizen', ?, '2026', ?)",
+            (username, req.name.strip(), (req.ward or "Central Ward").strip(), now_iso),
+        )
+        db.commit()
+        user = db.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
+
+    return {
+        "authenticated": True,
+        "role": "citizen",
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "name": user["name"],
+            "role": user["role"],
+            "ward": user["ward"],
+        },
+        "demo_notice": "Demo citizen registration for IBM Z Datathon 2026.",
+    }
+
+
+@app.get("/api/auth/users")
+def list_demo_users():
+    with get_db() as db:
+        rows = db.execute("SELECT id, username, name, role, ward, created_at FROM users").fetchall()
+    return [dict(r) for r in rows]
+
